@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rennen mit Leitplanken</title>
+    <style>
+        body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
+        canvas { background: #2ecc71; border: 10px solid #27ae60; display: block; margin: 10px auto; box-shadow: 0 0 30px rgba(0,0,0,0.7); }
+        .info { font-size: 20px; font-weight: bold; color: yellow; text-shadow: 2px 2px 4px #000; }
+    </style>
+</head>
+<body>
+    <h1>🏎️ Gib Gas! 🏁</h1>
+    <div class="info" id="status">Drücke "Pfeil hoch" zum Starten!</div>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let carX = 300;
+        let distance = 0;
+        let speed = 0;
+        let maxSpeed = 12; 
+        let finishLine = 3500; 
+
+        let keys = {
+            ArrowUp: false,
+            ArrowLeft: false,
+            ArrowRight: false
+        };
+
+        let tribunes = [];
+        for(let i=0; i<5; i++) {
+            tribunes.push({
+                x: i % 2 === 0 ? 20 : 510, 
+                y: i * 150,               
+                width: 70,  
+                height: 120 
+            });
+        }
+
+        function getTrackCurve(z) {
+            let x = 300; 
+            if (z > 300 && z < 1100) {
+                let prozent = (z - 300) / 800;
+                x = x - Math.sin(prozent * Math.PI) * 160; 
+            } else if (z > 1300 && z < 2300) {
+                let prozent = (z - 1300) / 1000;
+                x = x + Math.sin(prozent * Math.PI) * 180;
+            } else if (z > 2500 && z < 3200) {
+                let prozent = (z - 2500) / 700;
+                x = x - Math.sin(prozent * Math.PI) * 140;
+            }
+            return x;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Tribünen zeichnen
+            tribunes.forEach((t) => {
+                t.y += speed * 0.8; 
+                if(t.y > 700) t.y = -150; 
+
+                ctx.fillStyle = "#cccccc"; 
+                ctx.fillRect(t.x, t.y, t.width, t.height);
+                ctx.fillStyle = "#999999"; 
+                for(let row = 0; row < t.width; row += 10) {
+                    if(t.x < 300) ctx.fillRect(t.x + row, t.y, 3, t.height);
+                    else ctx.fillRect(t.x + t.width - row - 3, t.y, 3, t.height);
+                }
+                ctx.fillStyle = "#666666";
+                if(t.x < 300) ctx.fillRect(t.x, t.y, 6, t.height); 
+                else ctx.fillRect(t.x + t.width - 6, t.y, 6, t.height); 
+            });
+
+            // Straße zeichnen
+            ctx.beginPath();
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 140;
+            for (let i = 0; i < 110; i++) { 
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+
+            // Mittellinie
+            ctx.beginPath();
+            ctx.setLineDash([20, 30]);
+            ctx.strokeStyle = "#FFF";
+            ctx.lineWidth = 4;
+             for (let i = 0; i < 110; i++) {
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                 if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Ziel
+            if (distance > finishLine - 700) {
+                let finishX = getTrackCurve(finishLine);
+                for(let k=0; k<10; k++) {
+                     ctx.fillStyle = k % 2 === 0 ? "white" : "black";
+                     ctx.fillRect(finishX - 70 + (k*14), 600 - (finishLine - distance), 14, 20);
+                }
+            }
+
+            // Auto
+            ctx.fillStyle = "red"; 
+            ctx.fillRect(carX - 15, 500, 30, 50);
+            ctx.fillStyle = "black"; 
+            ctx.fillRect(carX - 10, 510, 20, 15);
+
+            
+            // --- DIE NEUE AUTO-LOGIK ---
+            
+            // 1. Wo ist die Mitte der Straße?
+            let currentTrackX = getTrackCurve(distance + 100);
+            
+            if (distance >= finishLine) {
+                maxSpeed = 0; // Im Ziel anhalten
+                document.getElementById("status").innerText = "🏆 ZIEL ERREICHT! 🏆";
+                document.getElementById("status").style.color = "#2ecc71";
+            } else {
+                maxSpeed = 12; // Volle Fahrt!
+                if(speed > 1) {
+                    document.getElementById("status").innerText = "Gib Gas!";
+                    document.getElementById("status").style.color = "yellow";
+                }
+            }
+
+            // 2. Gas geben oder bremsen
+            if (keys.ArrowUp && distance < finishLine) {
+                speed += 0.2; 
+            } else {
+                speed -= 0.3; 
+            }
+
+            // 3. Geschwindigkeit begrenzen
+            if (speed > maxSpeed) speed = maxSpeed; 
+            if (speed < 0) speed = 0; 
+
+            // 4. Lenken
+            if (keys.ArrowLeft && speed > 0) carX -= 4 + (speed / 3);
+            if (keys.ArrowRight && speed > 0) carX += 4 + (speed / 3);
+
+            // --- NEU: Unsichtbare Leitplanken ---
+            // Wenn das Auto zu weit nach links oder rechts fährt, prallt es ab!
+            if (carX < currentTrackX - 55) {
+                carX = currentTrackX - 55; // Sperre links
+            }
+            if (carX > currentTrackX + 55) {
+                carX = currentTrackX + 55; // Sperre rechts
+            }
+            // ------------------------------------
+
+            if(distance < finishLine) distance += speed;
+
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp") keys.ArrowUp = true;
+            if (e.key === "ArrowLeft") keys.ArrowLeft = true;
+            if (e.key === "ArrowRight") keys.ArrowRight = true;
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowUp") keys.ArrowUp = false;
+            if (e.key === "ArrowLeft") keys.ArrowLeft = false;
+            if (e.key === "ArrowRight") keys.ArrowRight = false;
+        });
+
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Terist Game</title>
+  <style>
+    body { background: #222; color: #fff; font-family: sans-serif; text-align: center; }
+    canvas { background: #111; display: block; margin: 20px auto; border: 2px solid #444; }
+    #score { font-size: 1.2em; margin: 10px; }
+    #game-over { color: #f44; font-size: 2em; display: none; }
+    button { margin: 10px; padding: 8px 16px; font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Terist (Tetris Clone)</h1>
+  <div id="score">Score: 0</div>
+  <canvas id="game" width="240" height="480"></canvas>
+  <div id="game-over">Game Over</div>
+  <button id="restart">Restart</button>
+  <script>
+    // --- Constants ---
+    const COLS = 10, ROWS = 20, BLOCK = 24;
+    const COLOR_VARIANTS = [
+      null,
+      ["#0ff", "#00bcd4", "#1565c0"],   // I: cyan, light blue, dark blue
+      ["#ff0", "#ffe066", "#f9a825"],   // O: yellow, pale yellow, amber
+      ["#f00", "#e91e63", "#9c27b0"],   // T: red, pink, purple
+      ["#0f0", "#66bb6a", "#00695c"],   // S: green, light green, teal
+      ["#00f", "#1e88e5", "#7c4dff"],   // Z: blue, light blue, violet
+      ["#f0f", "#ff80ab", "#ea80fc"],   // J: magenta, pink, light purple
+      ["#fa0", "#ff7043", "#ffeb3b"],   // L: orange, deep orange, yellow
+    ];
+    const SHAPES = [
+      [],
+      [[1,1,1,1]], // I
+      [[2,2],[2,2]], // O
+      [[0,3,0],[3,3,3]], // T
+      [[0,4,4],[4,4,0]], // S
+      [[5,5,0],[0,5,5]], // Z
+      [[6,0,0],[6,6,6]], // J
+      [[0,0,7],[7,7,7]], // L
+    ];
+
+    // --- Game State ---
+    let arena = createMatrix(COLS, ROWS);
+    let colorArena = createColorMatrix(COLS, ROWS);
+    let player = { pos: {x:0, y:0}, matrix: null, score: 0, color: null };
+    let dropCounter = 0, dropInterval = 600, lastTime = 0;
+    let gameOver = false;
+    let animating = false;
+    let clearEffect = null; // { rows, frame, maxFrames, points }
+
+    // --- DOM ---
+    const canvas = document.getElementById('game');
+    const context = canvas.getContext('2d');
+    context.scale(BLOCK/12, BLOCK/12);
+    const scoreEl = document.getElementById('score');
+    const gameOverEl = document.getElementById('game-over');
+    const restartBtn = document.getElementById('restart');
+
+    // --- Functions ---
+    function createMatrix(w, h) {
+      const m = [];
+      while (h--) m.push(new Array(w).fill(0));
+      return m;
+    }
+
+    function createColorMatrix(w, h) {
+      const m = [];
+      while (h--) m.push(new Array(w).fill(null));
+      return m;
+    }
+
+    function collide(arena, player) {
+      const m = player.matrix, o = player.pos;
+      for (let y=0; y<m.length; ++y)
+        for (let x=0; x<m[y].length; ++x)
+          if (
+            m[y][x] && (
+              y + o.y < 0 ||
+              y + o.y >= arena.length ||
+              x + o.x < 0 ||
+              x + o.x >= arena[0].length ||
+              arena[y+o.y][x+o.x]
+            )
+          )
+            return true;
+      return false;
+    }
+
+
+
+    function merge(arena, player) {
+      player.matrix.forEach((row, y) => {
+        row.forEach((val, x) => {
+          if (val) {
+            arena[y+player.pos.y][x+player.pos.x] = val;
+            colorArena[y+player.pos.y][x+player.pos.x] = player.color;
+          }
+        });
+      });
+    }
+
+    function playerDrop() {
+      player.pos.y++;
+      if (collide(arena, player)) {
+        player.pos.y--;
+        merge(arena, player);
+        playerReset();
+        const clearedRows = findClearedRows();
+        if (clearedRows.length > 0) {
+          animating = true;
+          let points = 0;
+          let rowCount = 1;
+          clearedRows.forEach(() => { points += rowCount * 10; rowCount *= 2; });
+          flashRows(clearedRows, points, () => {
+            arenaSweep(clearedRows);
+            updateScore();
+            animating = false;
+            if (collide(arena, player)) {
+              gameOver = true;
+              gameOverEl.style.display = "block";
+            }
+            lastTime = 0;
+            requestAnimationFrame(update);
+          });
+        } else {
+          updateScore();
+          if (collide(arena, player)) {
+            gameOver = true;
+            gameOverEl.style.display = "block";
+          }
+        }
+      }
+      dropCounter = 0;
+    }
+
+    function playerMove(dir) {
+      player.pos.x += dir;
+      if (collide(arena, player)) player.pos.x -= dir;
+    }
+
+    function playerRotate(dir) {
+      // Store the current horizontal position of the player
+      const pos = player.pos.x;
+      let offset = 1;
+      // Rotate the player's matrix in the given direction
+      rotate(player.matrix, dir);
+      // If collision occurs after rotation, try shifting player horizontally
+      while (collide(arena, player)) {
+        player.pos.x += offset;
+        offset = -(offset + (offset > 0 ? 1 : -1));
+        if (offset > player.matrix[0].length) {
+          rotate(player.matrix, -dir);
+          player.pos.x = pos;
+          return;
+        }
+      }
+    }
+
+    function rotate(matrix, dir) {
+      const rows = matrix.length;
+      const cols = matrix[0].length;
+      const result = [];
+      if (dir > 0) {
+        for (let x=0; x<cols; ++x) {
+          result.push([]);
+          for (let y=rows-1; y>=0; --y)
+            result[x].push(matrix[y][x]);
+        }
+      } else {
+        for (let x=cols-1; x>=0; --x) {
+          result.push([]);
+          for (let y=0; y<rows; ++y)
+            result[cols-1-x].push(matrix[y][x]);
+        }
+      }
+      matrix.length = 0;
+      result.forEach(row => matrix.push(row));
+    }
+
+    function arenaSweep(clearedRows) {
+      let rowCount = 1;
+      for (let i = 0; i < clearedRows.length; ++i) {
+        const y = clearedRows[i];
+        const row = arena.splice(y, 1)[0].fill(0);
+        colorArena.splice(y, 1);
+        arena.unshift(row);
+        colorArena.unshift(new Array(COLS).fill(null));
+        player.score += rowCount * 10;
+        rowCount *= 2;
+      }
+    }
+
+    function findClearedRows() {
+      const rows = [];
+      for (let y = arena.length - 1; y >= 0; --y) {
+        if (arena[y].every(v => v !== 0)) rows.push(y);
+      }
+      return rows;
+    }
+
+    function flashRows(clearedRows, points, callback) {
+      const totalFrames = 18;
+      let frame = 0;
+      const flashColors = ["#fff", "#ff0", "#fff", "#fa0", "#fff", "#f00"];
+      const multiLabel = clearedRows.length >= 4 ? "TETRIS!" :
+                         clearedRows.length === 3 ? "TRIPLE!" :
+                         clearedRows.length === 2 ? "DOUBLE!" : null;
+      function step() {
+        // Draw base arena
+        context.fillStyle = "#111";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        drawMatrix(arena, {x:0, y:0}, false);
+        // Flash cleared rows
+        const color = flashColors[Math.floor(frame / 3) % flashColors.length];
+        const alpha = 1 - (frame / totalFrames) * 0.5;
+        context.globalAlpha = alpha;
+        clearedRows.forEach(y => {
+          context.fillStyle = color;
+          context.fillRect(0, y * 12, COLS * 12, 12);
+        });
+        context.globalAlpha = 1;
+        // Draw score popup
+        if (multiLabel) {
+          context.save();
+          context.font = "bold 16px sans-serif";
+          context.fillStyle = "#fff";
+          context.textAlign = "center";
+          context.globalAlpha = 1 - frame / totalFrames;
+          context.fillText(multiLabel, (COLS * 12) / 2, (canvas.height / (BLOCK / 12)) / 2);
+          context.globalAlpha = 1;
+          context.restore();
+        }
+        // Draw +points popup
+        context.save();
+        context.font = "bold 12px sans-serif";
+        context.fillStyle = "#ff0";
+        context.textAlign = "center";
+        context.globalAlpha = 1 - frame / totalFrames;
+        context.fillText("+" + points, (COLS * 12) / 2, (canvas.height / (BLOCK / 12)) / 2 + 20);
+        context.globalAlpha = 1;
+        context.restore();
+        frame++;
+        if (frame < totalFrames) {
+          requestAnimationFrame(step);
+        } else {
+          callback();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    function playerReset() {
+      const idx = Math.floor(Math.random() * (SHAPES.length-1)) + 1;
+      player.matrix = SHAPES[idx].map(r => r.slice());
+      player.pos.y = 0;
+      player.pos.x = Math.floor(COLS/2) - Math.floor(player.matrix[0].length/2);
+      const variants = COLOR_VARIANTS[idx];
+      player.color = variants[Math.floor(Math.random() * variants.length)];
+      if (collide(arena, player)) {
+        gameOver = true;
+        gameOverEl.style.display = "block";
+      }
+    }
+
+
+    function drawMatrix(matrix, offset, isPlayer) {
+      matrix.forEach((row, y) => {
+        row.forEach((val, x) => {
+          if (val) {
+            context.fillStyle = isPlayer ? player.color : (colorArena[y+offset.y][x+offset.x] || "#fff");
+            context.fillRect((x+offset.x)*12, (y+offset.y)*12, 12, 12);
+            context.strokeStyle = "#333";
+            context.strokeRect((x+offset.x)*12, (y+offset.y)*12, 12, 12);
+          }
+        });
+      });
+    }
+
+    function draw() {
+      context.fillStyle = "#111";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      drawMatrix(arena, {x:0, y:0}, false);
+      drawMatrix(player.matrix, player.pos, true);
+    }
+
+    function updateScore() {
+      scoreEl.textContent = "Score: " + player.score;
+    }
+
+    function update(time = 0) {
+      if (gameOver || animating) return;
+      const dt = time - lastTime;
+      lastTime = time;
+      dropCounter += dt;
+      if (dropCounter > dropInterval) playerDrop();
+      draw();
+      requestAnimationFrame(update);
+    }
+
+    // --- Controls ---
+    document.addEventListener('keydown', e => {
+      if (gameOver) return;
+      if (e.key === "ArrowLeft") playerMove(-1);
+      else if (e.key === "ArrowRight") playerMove(1);
+      else if (e.key === "ArrowDown") playerDrop();
+      else if (e.key === "ArrowUp") playerRotate(1);
+      else if (e.key === "z" || e.key === "Z") playerRotate(-1);
+    });
+
+    restartBtn.onclick = () => {
+      arena = createMatrix(COLS, ROWS);
+      colorArena = createColorMatrix(COLS, ROWS);
+      player.score = 0;
+      gameOver = false;
+      gameOverEl.style.display = "none";
+      playerReset();
+      updateScore();
+      draw();
+      lastTime = 0;
+      requestAnimationFrame(update);
+    };
+
+    // --- Start Game ---
+    playerReset();
+    updateScore();
+    draw();
+    requestAnimationFrame(update);
+  </script>
+</body>
+</html>

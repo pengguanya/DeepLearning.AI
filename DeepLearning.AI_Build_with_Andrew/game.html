@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tactical Chaos Pong</title>
+    <style>
+        body {
+            background-color: #111;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 4px solid #333;
+            background-color: #000;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.1);
+        }
+        .ui { text-align: center; margin-bottom: 10px; }
+        .score-box { display: flex; justify-content: space-around; width: 800px; font-size: 24px; font-weight: bold; }
+        .user-color { color: #00FF00; }
+        .com-color { color: #FF3300; }
+    </style>
+</head>
+<body>
+
+    <div class="ui">
+        <h2>Tactical Chaos Pong</h2>
+        <div class="score-box">
+            <span class="user-color">YOU: <span id="userScore">0.0</span></span>
+            <span class="com-color">CPU: <span id="comScore">0.0</span></span>
+        </div>
+        <p style="color: #00ccff; font-size: 0.9em;">Cyan walls block incoming bullets!</p>
+    </div>
+    <canvas id="pong" width="800" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById("pong");
+        const ctx = canvas.getContext("2d");
+
+        // Game objects
+        const user = { x: 0, y: 150, width: 10, height: 100, color: "#00FF00", score: 0, dy: 0 };
+        const com = { x: 790, y: 150, width: 10, height: 100, color: "#FF3300", score: 0 };
+        const ball = { x: 400, y: 200, radius: 8, speed: 4.5, velocityX: 4.5, velocityY: 4.5, color: "#FFF" };
+        
+        // Two Moving Shields on User Side
+        const shields = [
+            { x: 120, y: 50, w: 12, h: 70, dir: 1, speed: 3 },
+            { x: 240, y: 250, w: 12, h: 70, dir: 1, speed: 3 }
+        ];
+
+        const guns = [
+            { y: 100, dir: 1, shootTarget: 'com' },
+            { y: 300, dir: -1, shootTarget: 'user' }
+        ];
+        
+        const bullets = [];
+        let frameCount = 0;
+
+        // Key Listeners
+        window.addEventListener("keydown", e => { if(e.key === "ArrowUp") user.dy = -8; if(e.key === "ArrowDown") user.dy = 8; });
+        window.addEventListener("keyup", e => { if(e.key === "ArrowUp" || e.key === "ArrowDown") user.dy = 0; });
+
+        function drawRect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+        function drawCircle(x, y, r, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); }
+
+        // Generic AABB Collision
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.w &&
+                   rect1.x + (rect1.width || rect1.radius || 10) > rect2.x &&
+                   rect1.y < rect2.y + rect2.h &&
+                   rect1.y + (rect1.height || rect1.radius || 4) > rect2.y;
+        }
+
+        function resetBall() {
+            ball.x = canvas.width/2; ball.y = canvas.height/2;
+            ball.speed = 4.5; ball.velocityX *= -1;
+        }
+
+        function update() {
+            // Player movement
+            user.y += user.dy;
+            user.y = Math.max(0, Math.min(canvas.height - user.height, user.y));
+
+            // Slower AI
+            com.y += (ball.y - (com.y + com.height/2)) * 0.055;
+
+            // Move Shields
+            shields.forEach(s => {
+                s.y += s.speed * s.dir;
+                if(s.y < 0 || s.y + s.h > canvas.height) s.dir *= -1;
+            });
+
+            // Ball physics
+            ball.x += ball.velocityX; ball.y += ball.velocityY;
+            if(ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) ball.velocityY *= -1;
+
+            // Ball collision with paddles
+            let player = (ball.x < canvas.width/2) ? user : com;
+            if(isColliding(ball, {x: player.x, y: player.y, w: player.width, h: player.height})) {
+                let collidePoint = (ball.y - (player.y + player.height/2)) / (player.height/2);
+                let angleRad = collidePoint * Math.PI/4;
+                let direction = (ball.x < canvas.width/2) ? 1 : -1;
+                ball.velocityX = direction * ball.speed * Math.cos(angleRad);
+                ball.velocityY = ball.speed * Math.sin(angleRad);
+                ball.speed += 0.15;
+            }
+
+            // Ball collision with Shields (bounce off)
+            shields.forEach(s => {
+                if(isColliding(ball, s)) {
+                    ball.velocityX *= -1;
+                    // Move ball out of shield to prevent sticking
+                    ball.x += ball.velocityX > 0 ? 5 : -5; 
+                }
+            });
+
+            // Scoring
+            if(ball.x < 0) { com.score++; resetBall(); }
+            else if(ball.x > canvas.width) { user.score++; resetBall(); }
+
+            // Gun logic
+            guns.forEach(gun => {
+                gun.y += 2.5 * gun.dir;
+                if(gun.y < 20 || gun.y > canvas.height - 20) gun.dir *= -1;
+                if(frameCount % 70 === 0) {
+                    bullets.push({ x: canvas.width/2, y: gun.y, velX: gun.shootTarget === 'com' ? 7 : -7, target: gun.shootTarget, w: 10, h: 4 });
+                }
+            });
+
+            // Bullet logic
+            for(let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.velX;
+
+                // Hit Shield? (Only if headed toward user)
+                let hitShield = false;
+                if(b.velX < 0) {
+                    shields.forEach(s => { if(isColliding(b, s)) hitShield = true; });
+                }
+
+                if(hitShield) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                // Hit Paddle?
+                let targetPaddle = b.target === 'user' ? user : com;
+                if(isColliding(b, {x: targetPaddle.x, y: targetPaddle.y, w: targetPaddle.width, h: targetPaddle.height})) {
+                    targetPaddle.score -= 0.1;
+                    bullets.splice(i, 1);
+                    continue;
+                }
+
+                if(b.x < 0 || b.x > canvas.width) bullets.splice(i, 1);
+            }
+
+            // Update UI
+            document.getElementById("userScore").innerText = user.score.toFixed(1);
+            document.getElementById("comScore").innerText = com.score.toFixed(1);
+            frameCount++;
+        }
+
+        function render() {
+            drawRect(0, 0, canvas.width, canvas.height, "#000"); // BG
+            
+            // Middle Line
+            for(let i=0; i<canvas.height; i+=40) drawRect(canvas.width/2-1, i, 2, 20, "#222");
+
+            // Draw Shields
+            shields.forEach(s => {
+                drawRect(s.x, s.y, s.w, s.h, "#00ccff");
+                // Subtle glow effect
+                ctx.strokeStyle = "#00ffff";
+                ctx.strokeRect(s.x, s.y, s.w, s.h);
+            });
+
+            // Draw Paddles
+            drawRect(user.x, user.y, user.width, user.height, user.color);
+            drawRect(com.x, com.y, com.width, com.height, com.color);
+
+            // Draw Ball
+            drawCircle(ball.x, ball.y, ball.radius, ball.color);
+
+            // Draw Guns
+            guns.forEach(gun => {
+                drawRect(canvas.width/2 - 8, gun.y - 12, 16, 24, "#444"); 
+                let barrelX = gun.shootTarget === 'com' ? 8 : -18;
+                drawRect(canvas.width/2 + barrelX, gun.y - 4, 10, 8, "#777");
+            });
+
+            // Draw Bullets
+            bullets.forEach(b => drawRect(b.x, b.y, b.w, b.h, "#FFEB3B"));
+        }
+
+        function loop() { update(); render(); requestAnimationFrame(loop); }
+        loop();
+
+    </script>
+</body>
+</html>

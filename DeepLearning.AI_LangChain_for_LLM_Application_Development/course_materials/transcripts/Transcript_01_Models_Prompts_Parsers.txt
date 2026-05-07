@@ -1,0 +1,679 @@
+0:02
+In lesson one, we'll be covering models, prompts, and
+0:06
+parsers. So models refers to the language models underpinning a
+0:10
+lot of it. Prompts refers to
+0:13
+the style of creating inputs to pass into the models.
+0:16
+And then parsers is on the opposite end.
+0:18
+It involves taking the output of these models
+0:20
+and parsing it into a more structured format
+0:23
+so that you can do things downstream with it.
+0:25
+Yep, so when you build an application using LLM, there'll
+0:29
+often be reusable models. We repeatedly prompt a model, parses
+0:32
+outputs, and so LangChain gives an easy set of abstractions to
+0:36
+do this type of operation.
+0:38
+So with that, let's jump in and take a look at models, prompts,
+0:42
+and parsers.
+0:43
+So to get started, here's a little bit of starter code. I'm going
+0:47
+to import OS, import OpenAI, and load my OpenAI secret key. The OpenAI
+0:52
+library is already installed in my Jupyter Notebook environment.
+0:55
+If you're running this locally, and you don't
+0:57
+have OpenAI installed yet, you might need to
+1:00
+run that. Bang, pip install OpenAI, but I'm not going to do
+1:04
+that here.
+1:05
+And then here's a helper function. This is actually very similar to the
+1:10
+helper function that you might have seen in the ChaiGPT prompt engineering
+1:15
+for developers course that I offered together with OpenAI's
+1:18
+Iza Fulford. And so, with this helper function, you can
+1:22
+say get completion on what is 1 plus 1, and this
+1:26
+will call ChatGPT, or technically the model, GPT 3.5 Turbo, to
+1:30
+give you an answer back like this.
+1:32
+1:34
+Now, to motivate the line chain abstractions
+1:37
+for model prompts and parsers, let's say you get an email
+1:42
+from a customer in a language other than English.
+1:47
+In order to make sure this is accessible,
+1:50
+the other language I'm going to use is the English pirate language, where
+1:54
+the consists are, I'd be fuming that me blender
+1:57
+lid flew off and splattered my kitchen walls
+1:59
+with smoothie.
+2:01
+And to make matters worse, the warranty don't cover the cost of
+2:03
+cleaning up me kitchen. I need your help right now, matey.
+2:07
+And so, what we will do is, ask this LLM to
+2:11
+translate the text to American English in a
+2:14
+calm and respectful tone. So I'm going to set style
+2:17
+to American English in a calm and respectful tone. And
+2:21
+so, in order to actually accomplish this, if
+2:24
+you've seen a little bit of prompting before,
+2:28
+I'm going to specify the prompt using an f-string with
+2:31
+the instructions, translate the text that is
+2:33
+delimited by triple backticks into style that is style,
+2:36
+and then plug in these two styles.
+2:38
+And so, this generates a prompt that says translate the
+2:42
+text and so on. I encourage you to pause
+2:45
+the video and run the code, and also try modifying the
+2:49
+prompt to see if you can get a different output.
+2:53
+You can then
+2:56
+prompt the Large Language Model to get a response. Let's
+2:59
+see what the response is. Says translated the English pirate's message
+3:03
+into this very polite, I'm really frustrated that my blender lid
+3:06
+flew off and made a mess of my kitchen walls with smoothie
+3:10
+and so on.
+3:12
+I could really use your help right now, my friend.
+3:14
+That sounds very nice.
+3:17
+So, if you have different customers writing
+3:20
+reviews in different languages, not just English pirate, but French,
+3:24
+German, Japanese, and so on, you can imagine having to generate
+3:29
+a whole sequence of prompts to generate such translations. Let's
+3:34
+look at how we can do this in a more convenient, way
+3:39
+using LangChain. I'm going to import chat OpenAI. This is
+3:44
+LangChain's abstraction for the chatGPT API endpoint.
+3:47
+3:48
+And so, if I then set chat equals chat OpenAI
+3:51
+and look at what chat is, it creates this object as follows
+3:56
+that uses the chatGPT model, which is also called GPT 3.5 turbo.
+4:00
+4:01
+When I'm building applications, one thing I will often do
+4:04
+is set the temperature parameter to be equal to zero. So
+4:08
+the default temperature is 0.7.
+4:10
+But let me actually redo that with temperature
+4:16
+equals 0.0, and now the temperature is set to 0 to make this output a
+4:21
+little bit less random.
+4:22
+And now, let me define the template string as follows.
+4:27
+Translate the text delimited by triple vectors into
+4:32
+style that is style, and then here's the text. And
+4:37
+to repeatedly reuse this template, let's import
+4:41
+LangChain's chat prompt template,
+4:45
+and then, let me create a prompt template
+4:49
+using that template string that we just wrote above.
+4:59
+From the prompt template, you can actually
+5:02
+extract the original prompt, and it realizes that this
+5:06
+prompt has two input variables, the style and the text,
+5:11
+which were shown here with the curly braces.
+5:15
+And here is the original template as well
+5:17
+that we had specified.
+5:19
+In fact, if I print this out, it realizes it has two input variables,
+5:23
+style and text. Now, let's specify the style. This is a style that
+5:28
+I want the customer message to be translated
+5:31
+to, so I'm going to call this customer style,
+5:34
+5:35
+and here's my
+5:39
+same customer email
+5:41
+as before. And now,
+5:48
+if I create customer messages, his will generate the prompt,
+5:54
+and will pass this large language model in
+5:56
+a minute to get a response. So if you want to look at the types,
+6:00
+the customer message is actually a list,
+6:03
+and if you look at the first element of the list,
+6:09
+this is more or less that prompt that you would
+6:13
+expect this to be creating.
+6:16
+Lastly, let's pass this prompt to the LLM, so I'm going
+6:20
+to call chat, which we had set earlier,
+6:23
+as a reference to the OpenAI chatGPT endpoint,
+6:27
+and, if we print out the customer responses content,
+6:33
+then, it gives you back this text translated from English
+6:40
+pirate to polite American English.
+6:43
+And of course, you can imagine other use cases where the
+6:47
+customer emails are in other languages and this
+6:50
+too can be used to translate the messages
+6:53
+for an English-speaking to understand and reply to.
+6:57
+I encourage you to pause the video and
+6:59
+run the code and also
+7:00
+try modifying the prompt to see if you can get a different
+7:04
+output.
+7:05
+Now let's hope our customer service agent replies
+7:07
+to the customer in their original language. So let's say,
+7:11
+English-speaking customer service agent writes
+7:13
+this and says, "Hey there customer, warranty
+7:15
+does not cover cleaning expenses for
+7:17
+your kitchen because it's your fault. You misused
+7:19
+your blender by forgetting to put on the lid. Tough luck.
+7:22
+See ya."
+7:23
+Now they're polite message, but
+7:25
+let's say this is what a customer service agent wants.
+7:31
+We are going to specify
+7:34
+that the service message is going to be
+7:36
+translated to this pirate style. So we want it to
+7:39
+be in a polite tone that speaks in
+7:42
+English pirate.
+7:44
+And because we previously created that prompt template,
+7:46
+the cool thing is, we can now reuse that prompt template and
+7:50
+specify that the output style we want is
+7:52
+this service style pirate
+7:54
+and the text is this service reply.
+7:57
+And if we do that,
+8:01
+that's the prompt.
+8:04
+And if we prompt,
+8:07
+ChaiGPT,
+8:09
+this is the response it gives us back. "Ahoy there, matey!
+8:12
+I must kindly inform you
+8:15
+that the warranty be not covering the expenses
+8:17
+or cleaning your galley."
+8:19
+And so on. Aye, tough luck. Farewell, me hearty.
+8:22
+So, you might be wondering, why are we using
+8:25
+prompt templates instead of, you know, just an f-string? The
+8:28
+answer is that as you build sophisticated applications,
+8:31
+prompts can be quite long and detailed.
+8:33
+8:34
+And so, prompt templates are a useful abstraction to help you
+8:38
+reuse good prompts when you can.
+8:41
+This is an example of a relatively long
+8:44
+prompt to grade a student's submission
+8:47
+for an online learning application.
+8:50
+And a prompt like this can be quite long, in which you can ask the
+8:54
+LLM to first solve the problem, and then have the
+8:57
+output in a certain format, and the output in a certain format.
+9:00
+9:01
+And wrapping this in a LangChain prompt makes
+9:04
+it easier to reuse a prompt like this.
+9:07
+Also, you see later that LangChain provides
+9:11
+prompts for some common operations, such as summarization, or
+9:16
+question answering, or connecting to SQL databases,
+9:18
+or connecting to different APIs. And so by using some of LangChain's
+9:23
+built-in prompts, you can quickly get an application working without
+9:27
+needing to,
+9:28
+engineer your own prompts.
+9:30
+One other aspect of LangChain's prompt libraries
+9:35
+is that it also supports output parsing, which we'll get to in a minute.
+9:41
+But when you're building a complex application using an LLM,
+9:45
+you often instruct the LLM
+9:48
+to generate its output in a certain format,
+9:51
+such as using specific keywords. This example on
+9:54
+the left illustrates using an LLM to carry out something called chain
+9:59
+of thought reasoning
+10:01
+using a framework called the React framework. But don't
+10:04
+worry about the technical details, but the keys of that is that
+10:09
+the thought is what the LLM
+10:13
+is thinking,
+10:14
+because by giving an LLM space to think, it can often get
+10:18
+to more accurate conclusions.
+10:20
+Then action as a keyword to carry the specific action,
+10:24
+and then observation to show what it learned from that action,
+10:28
+and so on.
+10:30
+And if you have a prompt that instructs the LLM
+10:34
+to use these specific keywords, thought, action, and observation,
+10:38
+then this prompt can be coupled with a parser
+10:41
+to extract out the text that has been
+10:44
+tagged with these specific keywords. And so that together
+10:48
+gives a very nice abstraction to specify the
+10:51
+input to an LLM,
+10:53
+and then also have a parser correctly interpret
+10:57
+the output that the LLM gives. And so with that, let's
+11:02
+return to see an example of an output parser using LangChain.
+11:07
+In this example, let's take a look at how you can have
+11:10
+an LLM output JSON,
+11:13
+and use LangChain to parse that output.
+11:16
+And the running example that I'll use will be
+11:19
+to extract
+11:21
+information from a product review,
+11:23
+and format that output in a JSON format.
+11:27
+So here's an example of how you would like the output to be formatted.
+11:32
+11:32
+Technically, this is a Python dictionary,
+11:35
+where whether or not the product is a gift,
+11:37
+maps to false, the number of days it
+11:39
+took to deliver was five, and the price value was pretty
+11:42
+affordable.
+11:43
+So this is one example of a desired output,
+11:47
+here is an example
+11:48
+of customer review, as well as a
+11:52
+template to try to get to that JSON output.
+11:56
+So here's a customer review. It says, this
+11:58
+lead blower is pretty amazing. It has four settings, candle blower, gender
+12:01
+breeze, windy city, and tornado.
+12:03
+It arrived in two days, just in time for my wife's
+12:06
+anniversary present. I think my wife liked it
+12:08
+so much she was speechless. So far, I've been
+12:10
+the only one using it, and so on. And here's a review
+12:13
+template. For the following text, extract the following
+12:15
+information.
+12:17
+Specify, was this a gift? So in this case, it would be yes,
+12:20
+because this is a gift.
+12:22
+And also, delivery days. How long did it take to deliver?
+12:25
+It looks like in this case, it arrived in two days.
+12:28
+And what's the price value? You know, slightly more expensive than
+12:32
+the lead blowers, and so on. So, the
+12:36
+review template asks the LLM
+12:38
+to take as input a customer review
+12:41
+and extract
+12:43
+these three fields and then format the output as JSON
+12:48
+with the following keys.
+12:55
+All right. So here's how you can wrap this in
+12:58
+LangChain. Let's import the chat prompt template. We'd
+13:01
+actually imported this already earlier. So technically,
+13:04
+this line is redundant, but I'll just import
+13:06
+it again and then have the prompt templates
+13:09
+created from
+13:10
+the review template
+13:13
+up on top.
+13:14
+And so, here's the prompt template.
+13:19
+And now, similar to our earlier usage of a prompt template, let's
+13:22
+create the
+13:25
+messages to pass to the
+13:27
+OpenAI,
+13:28
+endpoint.
+13:31
+Create the OpenAI endpoint, call that endpoint, and then let's
+13:35
+print out the response.
+13:38
+I encourage you to pause the video and run the code.
+13:44
+And there it is. It says, give us true, delivery day is 2,
+13:47
+and the price value also looks
+13:50
+pretty accurate. But note that if we
+13:55
+check the type
+13:59
+of the response, this is actually a string.
+14:02
+So it looks like JSON and looks like it has key-value
+14:05
+pairs, but it's actually not a dictionary. This is
+14:08
+just
+14:09
+one long string.
+14:10
+So what I'd really like to do is go to the
+14:13
+response content and get the value from the
+14:14
+gift key which should be true, but I run this, this
+14:17
+should generate an error
+14:18
+because, well, this is actually a string.
+14:21
+This is not a Python dictionary. So, let's
+14:25
+see how we will use LangChain's parser in order to do this. I'm going to
+14:33
+import response schema and structured output parser from
+14:37
+LangChain.
+14:38
+And I'm going to tell it what I wanted to parse by
+14:42
+specifying these response schemas. So the gif schema is named gif, and
+14:46
+here's the description. Was the item purchased as a gift
+14:49
+for someone else?
+14:51
+Answer true or yes, false if not or unknown, and so on.
+14:55
+So, have a gift schema, delivery date schema,
+14:57
+price value schema, and then let's put all three of them into a list
+15:02
+as follows.
+15:04
+Now that I've specified the schema for these LangChain can actually
+15:08
+give you the prompt
+15:10
+itself by
+15:12
+having the output parser tell you what instructions it wants you
+15:17
+to send to the LLM. So if I were to print
+15:20
+format instructions.
+15:23
+She has a pretty precise set of instructions for the LLM that
+15:26
+will cause it to generate an output that the output parser
+15:30
+can process.
+15:33
+So here's the new review template,
+15:36
+and the review template includes the
+15:38
+format instructions that LangChain
+15:41
+generated.
+15:44
+And so we can create a prompt
+15:47
+from the review template too,
+15:49
+and then create the
+15:52
+messages that will pass
+15:54
+to the OpenAI endpoint.
+15:57
+If you want, you can take a look at the actual prompt,
+16:01
+which gives the instructions to extract
+16:05
+the fields gift, delivery days, price value,
+16:09
+here's the text,
+16:10
+and then here are the formatting instructions.
+16:16
+Finally, if we
+16:19
+call the OpenAI
+16:22
+endpoint,
+16:24
+let's take a look at what response we got.
+16:28
+It is now this,
+16:32
+and now if we use the output parser that we created
+16:39
+earlier,
+16:40
+you can then parse this into an output dictionary,
+16:45
+which if I print, looks like this.
+16:47
+And notice that this is
+16:52
+of type dictionary, not a string,
+16:56
+which is why I can
+16:57
+now extract the value associated with the key
+17:00
+gift and get true, or
+17:03
+the value associated with delivery days
+17:06
+and get two,
+17:07
+or you can also extract the value associated with price value.
+17:13
+So this is a nifty way to take your LLM output and parse it
+17:18
+into a Python dictionary,
+17:20
+to make the output easier to use in downstream processing.
+17:23
+I encourage you to pause the video and run the code.
+17:27
+And so, that's it for models, prompts, and parsers. With
+17:30
+these tools, hopefully you'll be able to
+17:33
+reuse your own prompt templates easily, share prompt templates
+17:36
+with others that you're collaborating with, even
+17:39
+use LangChain's built-in prompt templates, which as you
+17:42
+just saw, can often be coupled with an output
+17:45
+parser,
+17:46
+so that the input prompt to output
+17:49
+in a specific format and then the parser,
+17:52
+parses that output to store the data in a Python dictionary or
+17:56
+some other data structure that makes it easy for
+17:59
+downstream processing. I hope you find this
+18:02
+useful in many of your applications.
+18:04
+And with that, let's go into the next video where we'll see
+18:09
+how LangChain can help you build better chatbots, or have
+18:13
+an LLM have more effective chats by better managing
+18:16
+what it remembers from the conversation
+18:18
+you've had so far.

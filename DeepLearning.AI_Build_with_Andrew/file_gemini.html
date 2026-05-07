@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birthday Card Factory</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Fredoka+One&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f0f4f8;
+            /* Polka dot pattern background */
+            background-image: radial-gradient(#cbd5e0 15%, transparent 16%), radial-gradient(#cbd5e0 15%, transparent 16%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- 1. The Fun Title Header --- */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: bounceIn 1s ease;
+        }
+
+        h1.main-title {
+            font-family: 'Fredoka One', cursive; /* Chunky fun font */
+            font-size: 3.5rem;
+            color: #ff6b6b;
+            text-shadow: 4px 4px 0px #feca57;
+            margin: 0;
+            letter-spacing: 2px;
+            -webkit-text-stroke: 2px white;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #576574;
+            margin-top: 10px;
+            background: white;
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        /* --- Layout Container --- */
+        .studio-container {
+            display: flex;
+            gap: 50px;
+            max-width: 1200px;
+            width: 100%;
+            align-items: flex-start; /* Align top so controls stay put while cards stack */
+        }
+
+        /* --- Left Side: Fixed Controls --- */
+        .controls {
+            flex: 0 0 350px; /* Fixed width */
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: sticky; /* Keeps controls visible while scrolling */
+            top: 20px;
+        }
+
+        .input-group { margin-bottom: 1.2rem; }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #636e72;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dfe6e9;
+            border-radius: 10px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: 0.3s;
+        }
+
+        input:focus { border-color: #ff6b6b; outline: none; }
+
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            margin-top: 10px;
+            box-shadow: 0 4px 0px #e05656; /* Chunky button click feel */
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #e05656;
+        }
+
+        /* --- Right Side: Card Stack Area --- */
+        .card-stack {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 30px; /* Space between stacked cards */
+        }
+
+        /* --- The Card Design --- */
+        .paper-card {
+            background-color: #fffaf0;
+            display: flex;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            border-radius: 6px;
+            overflow: hidden;
+            animation: slideDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy entrance */
+            min-height: 350px;
+        }
+
+        .page-left {
+            flex: 0 0 40%;
+            background-color: #ff9f43; /* Orange cover */
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 2px solid rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* Shadow gradient to look like a fold */
+        .page-left::after {
+            content: "";
+            position: absolute;
+            right: 0; top: 0; bottom: 0;
+            width: 15px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.1));
+        }
+
+        .cover-text {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.5rem;
+            color: white;
+            text-align: center;
+            line-height: 1.1;
+            transform: rotate(-5deg);
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+        }
+
+        .page-right {
+            flex: 1;
+            padding: 40px;
+            background-color: #fffaf0;
+            font-family: 'Caveat', cursive; /* Handwriting */
+            font-size: 1.8rem;
+            color: #2d3436;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+        }
+
+        /* --- Animations --- */
+        @keyframes slideDown {
+            0% { opacity: 0; transform: translateY(-50px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Mobile Adjustment */
+        @media (max-width: 900px) {
+            .studio-container { flex-direction: column; }
+            .controls { width: 100%; position: relative; top: 0; }
+            .paper-card { flex-direction: column; }
+            .page-left { padding: 40px; border-right: none; border-bottom: 2px solid rgba(0,0,0,0.1); }
+            .page-left::after { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="main-title">🎈 Birthday Card Factory 🎈</h1>
+        <div class="subtitle">Enter details, click button, get jokes!</div>
+    </header>
+
+    <div class="studio-container">
+        
+        <div class="controls">
+            <div class="input-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" placeholder="e.g. Grandma">
+            </div>
+            <div class="input-group">
+                <label for="age">Age</label>
+                <input type="number" id="age" placeholder="e.g. 70">
+            </div>
+            <div class="input-group">
+                <label for="hobby">Obsession</label>
+                <input type="text" id="hobby" placeholder="e.g. Bingo">
+            </div>
+            <button onclick="addCard()">✨ Generate New Card</button>
+        </div>
+
+        <div class="card-stack" id="card-stack">
+            </div>
+
+    </div>
+
+    <script>
+        function addCard() {
+            const name = document.getElementById('name').value.trim();
+            const age = document.getElementById('age').value.trim();
+            const hobby = document.getElementById('hobby').value.trim();
+            const stackContainer = document.getElementById('card-stack');
+
+            if (!name || !age || !hobby) {
+                alert("Please fill in all fields!");
+                return;
+            }
+
+            const templates = [
+                `Dearest ${name},<br><br>Happy Birthday! You’re ${age} now. That’s old enough that ${hobby} officially counts as "light exercise."`,
+                `${name},<br><br>At ${age}, you’ve reached the age where your back hurts more than your wallet does after a weekend of ${hobby}.`,
+                `Hey ${name},<br><br>I was going to buy you a gift related to ${hobby}, but I saw your age is ${age} and figured you'd prefer ibuprofen.`,
+                `${name}!<br><br>Wow, ${age} years old. May your day be filled with joy, cake, and absolutely zero interruptions to your ${hobby}.`,
+                `Happy B-Day ${name}!<br><br>You know you're ${age} when a "wild night out" is just staying up late to finish ${hobby}.`,
+                `Dear ${name},<br><br>Look at it this way: You aren't ${age}... you are 18 with ${age - 18} years of experience in ${hobby}!`,
+                `${name},<br><br>Don't worry about turning ${age}. In the world of ${hobby}, that's considered "vintage" and "high value."`
+            ];
+
+            const randomIndex = Math.floor(Math.random() * templates.length);
+            const message = templates[randomIndex];
+
+            // 1. Create a NEW div element for the card
+            const newCard = document.createElement('div');
+            newCard.className = 'paper-card';
+
+            // 2. Set the HTML content for this specific card
+            newCard.innerHTML = `
+                <div class="page-left">
+                    <div class="cover-text">HAPPY<br>BIRTHDAY!</div>
+                </div>
+                <div class="page-right">
+                    ${message}
+                </div>
+            `;
+
+            // 3. Prepend creates the new card at the TOP of the stack
+            stackContainer.prepend(newCard);
+        }
+    </script>
+
+</body>
+</html>

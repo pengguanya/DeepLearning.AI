@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Stunt-Rennen mit Neustart</title>
+    <style>
+        body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
+        canvas { background: #2ecc71; border: 10px solid #27ae60; display: block; margin: 10px auto; box-shadow: 0 0 30px rgba(0,0,0,0.7); }
+        .info { font-size: 20px; font-weight: bold; color: yellow; text-shadow: 2px 2px 4px #000; }
+        
+        /* --- NEU: Das Design für deinen neongrünen Knopf --- */
+        #restartBtn {
+            display: none; /* Am Anfang unsichtbar */
+            position: fixed; /* Bleibt fest auf dem Bildschirm */
+            bottom: 30px; /* Unten */
+            right: 30px; /* Rechts */
+            background-color: #39ff14; /* Neongrün! */
+            color: black; /* Schwarze Schrift, damit man es gut lesen kann */
+            font-size: 24px;
+            font-weight: bold;
+            padding: 15px 30px; /* Rechteckige Form */
+            border: 3px solid white;
+            border-radius: 8px; /* Leicht runde Ecken */
+            cursor: pointer;
+            box-shadow: 0 0 20px #39ff14; /* Cooles Neon-Leuchten */
+            z-index: 100;
+        }
+        /* Wenn man mit der Maus drübergeht, wird er etwas heller */
+        #restartBtn:hover {
+            background-color: #6dff54;
+        }
+        /* --------------------------------------------------- */
+    </style>
+</head>
+<body>
+    <h1>🏎️ Realistisches Rennen! 🚀</h1>
+    <div class="info" id="status">Drücke "Pfeil hoch" zum Starten!</div>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <button id="restartBtn" onclick="neustart()">NEU START</button>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let carX = 300;
+        let distance = 0;
+        let speed = 0;
+        let maxSpeed = 12; 
+        let finishLine = 6000; 
+
+        let jumpTime = 0; 
+        let rotation = 0; 
+        let ramps = [1500, 3000, 4500]; 
+
+        let keys = { ArrowUp: false, ArrowLeft: false, ArrowRight: false };
+        let particles = []; 
+
+        let tribunes = [];
+        for(let i=0; i<8; i++) { 
+            tribunes.push({
+                x: i % 2 === 0 ? 20 : 510, 
+                y: i * 150,               
+                width: 70,  
+                height: 120 
+            });
+        }
+
+        function getTrackCurve(z) {
+            let x = 300; 
+            if (z > 300 && z < 1100) x -= Math.sin((z - 300)/800 * Math.PI) * 160; 
+            else if (z > 1300 && z < 2300) x += Math.sin((z - 1300)/1000 * Math.PI) * 180;
+            else if (z > 2500 && z < 3500) x -= Math.sin((z - 2500)/1000 * Math.PI) * 150;
+            else if (z > 3800 && z < 4800) x += Math.sin((z - 3800)/1000 * Math.PI) * 170;
+            else if (z > 5000 && z < 5700) x -= Math.sin((z - 5000)/700 * Math.PI) * 100;
+            return x;
+        }
+
+        // --- NEU: Die Neustart-Funktion ---
+        // Diese wird aufgerufen, wenn du auf den grünen Knopf klickst
+        function neustart() {
+            distance = 0; // Zurück zum Start
+            speed = 0; // Auto anhalten
+            carX = 300; // Auto wieder in die Mitte
+            jumpTime = 0; 
+            rotation = 0;
+            particles = []; // Rauchwolken löschen
+            
+            // Knopf wieder verstecken
+            document.getElementById("restartBtn").style.display = "none"; 
+            
+            // Text oben zurücksetzen
+            document.getElementById("status").innerText = "Drücke 'Pfeil hoch' zum Starten!";
+            document.getElementById("status").style.color = "yellow";
+        }
+        // ----------------------------------
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            tribunes.forEach((t) => {
+                t.y += speed * 0.8; 
+                if(t.y > 700) t.y = -150; 
+                
+                ctx.fillStyle = "rgba(0,0,0,0.4)";
+                ctx.fillRect(t.x + 10, t.y + 10, t.width, t.height);
+
+                ctx.fillStyle = "#cccccc"; 
+                ctx.fillRect(t.x, t.y, t.width, t.height);
+                ctx.fillStyle = "#999999"; 
+                for(let row = 0; row < t.width; row += 10) {
+                    if(t.x < 300) ctx.fillRect(t.x + row, t.y, 3, t.height);
+                    else ctx.fillRect(t.x + t.width - row - 3, t.y, 3, t.height);
+                }
+                ctx.fillStyle = "#555";
+                if(t.x < 300) ctx.fillRect(t.x, t.y, 6, t.height); 
+                else ctx.fillRect(t.x + t.width - 6, t.y, 6, t.height); 
+            });
+
+            ctx.beginPath();
+            ctx.strokeStyle = "#c0392b"; 
+            ctx.lineWidth = 156; 
+            for (let i = 0; i < 110; i++) { 
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.setLineDash([20, 20]);
+            ctx.strokeStyle = "#ffffff"; 
+            ctx.lineWidth = 156; 
+            for (let i = 0; i < 110; i++) { 
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]); 
+
+            ctx.beginPath();
+            ctx.strokeStyle = "#444"; 
+            ctx.lineWidth = 140;
+            for (let i = 0; i < 110; i++) { 
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+
+            ramps.forEach(rampZ => {
+                let diff = rampZ - distance; 
+                if (diff > 0 && diff < 600) { 
+                    let rampY = 600 - diff; 
+                    let rampX = getTrackCurve(rampZ);
+                    
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    ctx.fillRect(rampX - 60, rampY + 5, 120, 30);
+
+                    ctx.fillStyle = "#f1c40f"; 
+                    ctx.fillRect(rampX - 60, rampY, 120, 30);
+                    ctx.fillStyle = "#222"; 
+                    for(let b = 0; b < 120; b += 20) {
+                        ctx.beginPath();
+                        ctx.moveTo(rampX - 60 + b, rampY + 30);
+                        ctx.lineTo(rampX - 50 + b, rampY);
+                        ctx.lineTo(rampX - 40 + b, rampY);
+                        ctx.lineTo(rampX - 50 + b, rampY + 30);
+                        ctx.fill();
+                    }
+                }
+            });
+
+            ctx.beginPath();
+            ctx.setLineDash([20, 30]);
+            ctx.strokeStyle = "#ecf0f1";
+            ctx.lineWidth = 4;
+             for (let i = 0; i < 110; i++) {
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                 if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (distance > finishLine - 700) {
+                let finishX = getTrackCurve(finishLine);
+                for(let k=0; k<10; k++) {
+                     ctx.fillStyle = k % 2 === 0 ? "white" : "black";
+                     ctx.fillRect(finishX - 70 + (k*14), 600 - (finishLine - distance), 14, 20);
+                }
+            }
+
+            if (speed > 2 && jumpTime === 0) {
+                particles.push({
+                    x: carX + (Math.random() * 10 - 5), 
+                    y: 525, 
+                    life: 1, 
+                    size: Math.random() * 4 + 2 
+                });
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.life -= 0.05; 
+                p.y += speed * 0.5; 
+                p.size += 0.3; 
+
+                ctx.fillStyle = `rgba(150, 150, 150, ${p.life})`; 
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); 
+                ctx.fill();
+
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            let currentTrackX = getTrackCurve(distance + 100);
+            let onRamp = ramps.find(r => Math.abs((distance + 100) - r) < 10);
+            if (onRamp && jumpTime === 0 && speed > 5) {
+                jumpTime = 0.1; 
+                speed += 5;     
+            }
+
+            let scale = 1; 
+            if (jumpTime > 0) {
+                jumpTime += 0.05; 
+                rotation += 0.3;  
+                scale = 1 + Math.sin(jumpTime) * 0.8; 
+                if (jumpTime > Math.PI) {
+                    jumpTime = 0; 
+                    rotation = 0; 
+                }
+            }
+
+            ctx.save(); 
+            ctx.translate(carX, 500); 
+            
+            if (jumpTime > 0) ctx.rotate(rotation); 
+            ctx.scale(scale, scale); 
+            
+            if(jumpTime > 0) {
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillRect(-10, -20, 30, 50);
+            }
+
+            if (jumpTime === 0) {
+                ctx.fillStyle = "rgba(255, 255, 0, 0.3)"; 
+                ctx.beginPath();
+                ctx.moveTo(-10, -25); 
+                ctx.lineTo(-30, -100);
+                ctx.lineTo(10, -100);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(10, -25); 
+                ctx.lineTo(-10, -100);
+                ctx.lineTo(30, -100);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = "#111"; 
+            ctx.fillRect(-18, -20, 6, 12); 
+            ctx.fillRect(12, -20, 6, 12);  
+            ctx.fillRect(-18, 10, 6, 12);  
+            ctx.fillRect(12, 10, 6, 12);   
+
+            ctx.fillStyle = "#e74c3c"; 
+            ctx.fillRect(-14, -25, 28, 48); 
+            
+            ctx.fillStyle = "#85c1e9"; 
+            ctx.fillRect(-10, -10, 20, 15); 
+            ctx.fillRect(-10, 10, 20, 8);   
+
+            ctx.fillStyle = "#900C3F"; 
+            ctx.fillRect(-16, 20, 32, 5); 
+            
+            ctx.restore(); 
+
+            if (distance >= finishLine) {
+                maxSpeed = 0;
+                document.getElementById("status").innerText = "🏆 ZIEL ERREICHT! 🏆";
+                document.getElementById("status").style.color = "#2ecc71";
+                
+                // --- NEU: Hier sagen wir dem Knopf, dass er auftauchen soll! ---
+                document.getElementById("restartBtn").style.display = "block";
+                // ----------------------------------------------------------------
+                
+            } else if (jumpTime > 0) {
+                document.getElementById("status").innerText = "🚀 STUNT-SPRUNG! 🚀";
+                document.getElementById("status").style.color = "cyan";
+            } else {
+                maxSpeed = 12;
+                if(speed > 1) {
+                    document.getElementById("status").innerText = "Gib Gas!";
+                    document.getElementById("status").style.color = "yellow";
+                }
+            }
+
+            if (keys.ArrowUp && distance < finishLine) speed += 0.2; 
+            else speed -= 0.3; 
+
+            if (speed > maxSpeed && jumpTime === 0) speed = maxSpeed; 
+            if (speed < 0) speed = 0; 
+
+            if (jumpTime === 0) {
+                if (keys.ArrowLeft && speed > 0) carX -= 4 + (speed / 3);
+                if (keys.ArrowRight && speed > 0) carX += 4 + (speed / 3);
+            }
+
+            if (carX < currentTrackX - 55) carX = currentTrackX - 55;
+            if (carX > currentTrackX + 55) carX = currentTrackX + 55;
+
+            if(distance < finishLine) distance += speed;
+
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp") keys.ArrowUp = true;
+            if (e.key === "ArrowLeft") keys.ArrowLeft = true;
+            if (e.key === "ArrowRight") keys.ArrowRight = true;
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowUp") keys.ArrowUp = false;
+            if (e.key === "ArrowLeft") keys.ArrowLeft = false;
+            if (e.key === "ArrowRight") keys.ArrowRight = false;
+        });
+
+        draw();
+    </script>
+</body>
+</html>

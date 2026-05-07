@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rennen mit Tribünen</title>
+    <style>
+        body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
+        canvas { background: #2ecc71; border: 10px solid #27ae60; display: block; margin: 10px auto; box-shadow: 0 0 30px rgba(0,0,0,0.7); }
+        .info { font-size: 20px; font-weight: bold; color: yellow; text-shadow: 2px 2px 4px #000; }
+    </style>
+</head>
+<body>
+    <h1>🏎️ Das Große Rennen 🏁</h1>
+    <div class="info" id="status">Fahr los!</div>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let carX = 300;
+        let distance = 0;
+        let speed = 0;
+        let finishLine = 3500; 
+
+        // --- NEU: Tribünen statt Gebäude ---
+        let tribunes = [];
+        // Wir erstellen 5 lange Tribünen
+        for(let i=0; i<5; i++) {
+            tribunes.push({
+                // Abwechselnd links (bei X=20) und rechts (bei X=510)
+                x: i % 2 === 0 ? 20 : 510, 
+                y: i * 150,               
+                width: 70,  // Tribünen sind breiter
+                height: 120 // Und länger
+            });
+        }
+        // ------------------------------------
+
+        // Die Funktion für die runden Kurven (bleibt gleich)
+        function getTrackCurve(z) {
+            let x = 300; 
+            if (z > 300 && z < 1100) {
+                let prozent = (z - 300) / 800;
+                x = x - Math.sin(prozent * Math.PI) * 160; 
+            } else if (z > 1300 && z < 2300) {
+                let prozent = (z - 1300) / 1000;
+                x = x + Math.sin(prozent * Math.PI) * 180;
+            } else if (z > 2500 && z < 3200) {
+                let prozent = (z - 2500) / 700;
+                x = x - Math.sin(prozent * Math.PI) * 140;
+            }
+            return x;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // --- NEU: Tribünen zeichnen ---
+            tribunes.forEach((t) => {
+                // Bewegung (Parallax-Effekt)
+                t.y += speed * 0.8; 
+                if(t.y > 700) t.y = -150; 
+
+                // 1. Die Grundfläche (Beton)
+                ctx.fillStyle = "#cccccc"; // Helles Grau
+                ctx.fillRect(t.x, t.y, t.width, t.height);
+
+                // 2. Die Sitzreihen (dunklere Streifen)
+                ctx.fillStyle = "#999999"; // Dunkleres Grau
+                // Wir zeichnen alle 10 Pixel einen Streifen
+                for(let row = 0; row < t.width; row += 10) {
+                    if(t.x < 300) {
+                        // Linke Seite: Reihen steigen nach links an
+                        ctx.fillRect(t.x + row, t.y, 3, t.height);
+                    } else {
+                        // Rechte Seite: Reihen steigen nach rechts an
+                        ctx.fillRect(t.x + t.width - row - 3, t.y, 3, t.height);
+                    }
+                }
+
+                // 3. Die Rückwand (ganz dunkel)
+                ctx.fillStyle = "#666666";
+                if(t.x < 300) {
+                    ctx.fillRect(t.x, t.y, 6, t.height); // Wand links
+                } else {
+                    ctx.fillRect(t.x + t.width - 6, t.y, 6, t.height); // Wand rechts
+                }
+            });
+            // ------------------------------
+
+
+            // Straße zeichnen
+            ctx.beginPath();
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 140;
+            for (let i = 0; i < 110; i++) { 
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+
+            // Mittellinie
+            ctx.beginPath();
+            ctx.setLineDash([20, 30]);
+            ctx.strokeStyle = "#FFF";
+            ctx.lineWidth = 4;
+             for (let i = 0; i < 110; i++) {
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                 if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Ziel
+            if (distance > finishLine - 700) {
+                let finishX = getTrackCurve(finishLine);
+                for(let k=0; k<10; k++) {
+                     ctx.fillStyle = k % 2 === 0 ? "white" : "black";
+                     ctx.fillRect(finishX - 70 + (k*14), 600 - (finishLine - distance), 14, 20);
+                }
+                if(distance < finishLine) document.getElementById("status").innerText = "Gleich da!";
+            }
+
+            // Auto
+            ctx.fillStyle = "red"; 
+            ctx.fillRect(carX - 15, 500, 30, 50);
+            ctx.fillStyle = "black"; 
+            ctx.fillRect(carX - 10, 510, 20, 15);
+
+            // Logik (Gras oder Straße?)
+            let currentTrackX = getTrackCurve(distance + 100);
+            let diff = Math.abs(carX - currentTrackX);
+            
+            if (distance >= finishLine) {
+                speed = 0;
+                document.getElementById("status").innerText = "🏆 ZIEL ERREICHT! 🏆";
+                document.getElementById("status").style.color = "#2ecc71";
+            } else if (diff > 65) {
+                speed = 3; 
+                document.getElementById("status").innerText = "Achtung: GRAS!";
+                document.getElementById("status").style.color = "orange";
+            } else {
+                let nextTrackX = getTrackCurve(distance + 200);
+                if(Math.abs(currentTrackX - nextTrackX) < 5) {
+                     speed = 10; 
+                     document.getElementById("status").innerText = "VOLLGAS!";
+                } else {
+                     speed = 7; 
+                     document.getElementById("status").innerText = "Kurve...";
+                }
+                document.getElementById("status").style.color = "yellow";
+            }
+            if(distance < finishLine) distance += speed;
+
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") carX -= 20;
+            if (e.key === "ArrowRight") carX += 20;
+        });
+
+        draw();
+    </script>
+</body>
+</html>

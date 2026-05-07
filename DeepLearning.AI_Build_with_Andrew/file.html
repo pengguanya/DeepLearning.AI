@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Birthday Card Writer — Party Time!</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Lora:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1: #fff6e9;
+      --bg2: #ffe6f2;
+      --accent1: #ff6b6b;
+      --accent2: #ffb86b;
+      --text: #1b2430;
+      --muted: #6b7280;
+      --paper: #fffefc;
+    }
+
+    /* Page */
+    body {
+      margin: 0;
+      padding: 22px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      min-height: 100vh;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Fun title at top */
+    .page-title {
+      width: 100%;
+      max-width: 1100px;
+      margin-bottom: 14px;
+      text-align: center;
+      display: block;
+    }
+    .page-title h2 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.4px;
+      color: #2b3a4a;
+    }
+    .page-title p {
+      margin: 6px 0 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    /* Left column: form */
+    .panel {
+      flex: 1 1 420px;
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 8px 26px rgba(20,30,50,0.08);
+    }
+
+    .hero {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:8px;
+    }
+    .hero .emoji { font-size:36px; }
+    h1 { margin: 0; font-size:18px; }
+    .subtitle { margin:4px 0 0 0; color:var(--muted); font-size:13px; }
+
+    label { display:block; margin-top:12px; font-weight:600; font-size:13px; color: #222; }
+    input[type="text"], input[type="number"], textarea {
+      width:100%;
+      padding:10px;
+      margin-top:6px;
+      border-radius:8px;
+      border: 1px solid #e6e9ef;
+      background: #fbfdff;
+      box-sizing: border-box;
+      font-size:14px;
+      color: var(--text);
+      outline: none;
+    }
+    textarea { min-height:110px; resize: vertical; }
+
+    .controls { margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    button {
+      padding:10px 14px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      color: white;
+      background: linear-gradient(90deg, var(--accent1), var(--accent2));
+      box-shadow: 0 8px 20px rgba(255,107,107,0.12);
+    }
+    button.small {
+      background: linear-gradient(90deg, #6bd6ff, #9d6bff);
+      padding:8px 12px;
+      font-weight:600;
+    }
+
+    .hint { color: var(--muted); font-size:13px; margin-top:6px; }
+
+    /* Right column: card preview + stack */
+    .preview-column {
+      width: 420px;
+      flex: 0 0 420px;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+      align-items:center;
+    }
+
+    .card-outer {
+      width: 360px;
+      height: 480px;
+      background: linear-gradient(180deg, #fffefc 0%, #fff8f0 100%);
+      border-radius: 12px;
+      box-shadow: 0 18px 40px rgba(20,30,50,0.12);
+      position: relative;
+      padding: 18px;
+      box-sizing: border-box;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+
+    .card-inner {
+      position: absolute;
+      inset: 18px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.95) 100%);
+      border-radius: 8px;
+      display:flex;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .card-left, .card-right {
+      flex: 1 1 50%;
+      padding: 22px;
+      box-sizing: border-box;
+      min-width: 0;
+    }
+
+    .card-inner::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      width: 2px;
+      height: calc(100% - 36px);
+      background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02), rgba(0,0,0,0.06));
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    .card-left {
+      background: linear-gradient(180deg, rgba(255,245,240,0.6), rgba(255,255,255,0.4));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: var(--muted);
+      font-size:13px;
+      text-align:center;
+      border-right: 1px dashed rgba(0,0,0,0.04);
+    }
+
+    .card-right {
+      position: relative;
+      background: transparent;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:10px;
+    }
+
+    .card-title {
+      font-family: 'Dancing Script', cursive;
+      font-size: 28px;
+      color: var(--accent1);
+      margin: 0;
+      line-height: 1;
+    }
+    .card-body {
+      font-family: 'Lora', Georgia, serif;
+      color: #2c3440;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .card-sign {
+      margin-top: 10px;
+      font-weight:700;
+      color: #444;
+      font-size: 14px;
+    }
+
+    /* stacked mini cards */
+    .stack-container {
+      width: 360px;
+      max-height: 300px;
+      overflow: auto;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding-right:6px;
+    }
+
+    .mini-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 8px 18px rgba(20,30,50,0.06);
+      padding: 10px;
+      box-sizing: border-box;
+      display:flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .mini-card .mini-left {
+      width: 100px;
+      height: 80px;
+      background: linear-gradient(180deg, #fff8f0, #fffefc);
+      border-radius: 6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color: var(--muted);
+      font-size: 12px;
+      text-align:center;
+      padding:6px;
+    }
+    .mini-card .mini-right {
+      flex: 1;
+      font-family: 'Lora', Georgia, serif;
+      font-size: 13px;
+      color: #28323a;
+      line-height: 1.3;
+    }
+    .mini-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top:6px;
+    }
+
+    /* small decorations at corners */
+    .corner-deco {
+      position: absolute;
+      width: 68px;
+      height: 68px;
+      opacity: 0.95;
+      pointer-events: none;
+    }
+    .top-left { top: -16px; left: -8px; transform: rotate(-12deg); }
+    .bottom-right { bottom: -16px; right: -8px; transform: rotate(18deg); }
+
+    .placeholder {
+      color: var(--muted);
+      font-size: 13px;
+      text-align:center;
+      padding: 10px;
+    }
+
+    /* responsive: stack on small screens */
+    @media (max-width: 980px) {
+      .wrap { flex-direction: column; align-items: stretch; gap:16px; padding-bottom: 30px; }
+      .preview-column { width: 100%; flex: 0 0 auto; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-title" role="banner">
+    <h2>🎈 The Great Birthday Card Factory — Make Someone's Day!</h2>
+    <p>Write a funny birthday message — keep all previous cards visible below the preview.</p>
+  </div>
+
+  <div class="wrap">
+    <div class="panel" aria-labelledby="title">
+      <div class="hero">
+        <div class="emoji">🎊</div>
+        <div>
+          <h1 id="title">Compose your message</h1>
+          <div class="subtitle">Fill in the fields and click Generate — older cards will be stacked below the preview.</div>
+        </div>
+      </div>
+
+      <label for="name">Name</label>
+      <input id="name" type="text" placeholder="e.g. Alex" />
+
+      <label for="age">Age</label>
+      <input id="age" type="number" min="0" placeholder="e.g. 30" />
+
+      <label for="hobby">Hobby</label>
+      <input id="hobby" type="text" placeholder="e.g. gardening, gaming, knitting" />
+      <div class="hint">Hobby is optional but makes the message more personal.</div>
+
+      <div class="controls">
+        <button id="generate">Generate message</button>
+        <button class="small" id="copy">Copy</button>
+        <button class="small" id="new">Generate another</button>
+        <button class="small" id="print" title="Print the card">Print</button>
+      </div>
+
+      <div class="output" style="margin-top:14px;">
+        <label for="result">Generated message (raw)</label>
+        <textarea id="result" readonly placeholder="Your funny message will appear here"></textarea>
+      </div>
+    </div>
+
+    <!-- Right column: preview + stack -->
+    <div class="preview-column" aria-hidden="false">
+      <div class="card-outer" role="img" aria-label="Birthday card preview">
+        <svg class="corner-deco top-left" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <g fill="none" stroke="#FFD8DD" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 86 C30 20 76 18 96 4"/>
+            <path d="M8 66 C34 40 70 36 90 26"/>
+          </g>
+        </svg>
+        <svg class="corner-deco bottom-right" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <g fill="none" stroke="#D6FFEB" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M96 14 C68 86 26 86 6 96"/>
+            <path d="M86 36 C60 64 30 74 12 82"/>
+          </g>
+        </svg>
+
+        <div class="card-inner" id="cardInner">
+          <div class="card-left" id="cardLeft">
+            <div>
+              <div style="font-weight:700; margin-bottom:6px;">A little space for you</div>
+              <div class="placeholder">Use this side for stickers, quick doodles or a short personal note.</div>
+            </div>
+          </div>
+          <div class="card-right" id="cardRight">
+            <div id="cardContent" style="padding-right:6px;">
+              <div class="placeholder">Your card preview will appear here after you generate a message.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stack: previous cards. Newest ones will be placed at the top of this container -->
+      <div id="cardStack" class="stack-container" aria-live="polite" aria-label="Previous cards stack">
+        <!-- Mini cards will appear here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Templates: placeholders {name}, {age}, {ageOrdinal}, {hobby}
+    const templates = [
+      "Happy {ageOrdinal}, {name}! I hear the best part of {hobby} is when the snacks show up—so party like a pro.",
+      "{name}, congrats on turning {age}! At this rate your {hobby} skills will soon require a referee.",
+      "Happy birthday, {name}! {age} looks great on you. Your {hobby} could use more trophies and fewer excuses.",
+      "Cheers to {name} for hitting {age}! May your {hobby} always have Wi‑Fi and snacks.",
+      "{name}, you're {age} and still rocking {hobby} like it's a highly trained cat. Keep it mysterious!",
+      "Happy {ageOrdinal}, {name}! You're old enough to know better and young enough to do it anyway—especially with {hobby}.",
+      "Congrats {name} — {age}! If {hobby} were an Olympic sport, you'd probably invent a new move and look fabulous doing it.",
+      "Happy birthday {name}! At {age}, your {hobby} has officially achieved 'legend' status in at least one living room."
+    ];
+
+    // Helpers
+    function ordinalSuffix(n) {
+      const s = ["th","st","nd","rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+    function capitalize(s) { if (!s) return s; return s.charAt(0).toUpperCase() + s.slice(1); }
+    function chooseRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function fillTemplate(template, data) {
+      return template
+        .replace(/{name}/g, data.name || "friend")
+        .replace(/{age}/g, data.age || "age")
+        .replace(/{ageOrdinal}/g, data.ageOrdinal || "")
+        .replace(/{hobby}/g, data.hobby || "your hobby");
+    }
+    function escapeHTML(str) {
+      return String(str || '')
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // DOM
+    const nameInput = document.getElementById('name');
+    const ageInput = document.getElementById('age');
+    const hobbyInput = document.getElementById('hobby');
+    const result = document.getElementById('result');
+    const generateBtn = document.getElementById('generate');
+    const copyBtn = document.getElementById('copy');
+    const newBtn = document.getElementById('new');
+    const printBtn = document.getElementById('print');
+    const cardContent = document.getElementById('cardContent');
+    const cardStack = document.getElementById('cardStack');
+
+    // Keep track of current card so we can push it to the stack when creating a new one
+    let currentCardData = null;
+    let currentCardMessage = "";
+
+    function buildCardHTML(data, rawMessage) {
+      const nameEsc = escapeHTML(data.name);
+      const messageEsc = escapeHTML(rawMessage);
+      const para = messageEsc.replace(/\—/g, "&mdash;").replace(/\n/g, "<br>");
+      return `
+        <div style="display:flex;flex-direction:column;">
+          <div style="margin-bottom:6px;">
+            <div class="card-title">Dear ${nameEsc},</div>
+          </div>
+          <div class="card-body">${para}</div>
+          <div class="card-sign">With love (and cake 🎂)</div>
+        </div>
+      `;
+    }
+
+    function buildMiniCardElement(data, rawMessage) {
+      // Create a compact mini card node to show in the stack
+      const mini = document.createElement('div');
+      mini.className = 'mini-card';
+      const nameEsc = escapeHTML(data.name);
+      const messageEsc = escapeHTML(rawMessage);
+      // Shorten message for preview
+      let shortMsg = messageEsc;
+      if (shortMsg.length > 120) {
+        shortMsg = shortMsg.slice(0, 117) + '...';
+      }
+      mini.innerHTML = `
+        <div class="mini-left">${nameEsc}<div class="mini-meta">${data.age ? data.age + ' yrs' : ''}</div></div>
+        <div class="mini-right">${shortMsg}</div>
+      `;
+      return mini;
+    }
+
+    function generateMessage() {
+      const rawName = nameInput.value.trim();
+      const rawAge = ageInput.value.trim();
+      const rawHobby = hobbyInput.value.trim();
+
+      if (!rawName) {
+        alert("Please enter the person's name.");
+        nameInput.focus();
+        return;
+      }
+
+      let ageNum = null;
+      if (rawAge !== "") {
+        ageNum = parseInt(rawAge, 10);
+        if (isNaN(ageNum) || ageNum < 0) {
+          alert("Please enter a valid non-negative number for age, or leave blank.");
+          ageInput.focus();
+          return;
+        }
+      }
+
+      const newData = {
+        name: capitalize(rawName),
+        age: ageNum !== null ? String(ageNum) : "",
+        ageOrdinal: ageNum !== null ? ordinalSuffix(ageNum) : "",
+        hobby: rawHobby ? rawHobby.toLowerCase() : ""
+      };
+
+      const template = chooseRandom(templates);
+      const message = fillTemplate(template, newData);
+
+      // If there's an existing current card, push it into the stack under the new one
+      if (currentCardMessage) {
+        // create mini element for the previous card and add it to the top of the stack
+        const mini = buildMiniCardElement(currentCardData, currentCardMessage);
+        // place older cards underneath newer ones: prepend previous main so newest appear top of stack
+        cardStack.prepend(mini);
+      }
+
+      // Update current card and main preview
+      currentCardData = newData;
+      currentCardMessage = message;
+
+      result.value = message;
+      cardContent.innerHTML = buildCardHTML(newData, message);
+    }
+
+    generateBtn.addEventListener('click', generateMessage);
+
+    copyBtn.addEventListener('click', function () {
+      if (!result.value) {
+        alert("No message to copy. Generate one first.");
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(result.value).then(() => {
+          alert("Copied to clipboard!");
+        }).catch(() => {
+          alert("Unable to copy automatically — select and copy manually.");
+        });
+      } else {
+        result.select();
+        try { document.execCommand('copy'); alert("Copied to clipboard!"); } catch (e) { alert("Unable to copy — select and copy manually."); }
+      }
+    });
+
+    newBtn.addEventListener('click', function () {
+      const current = result.value;
+      let attempts = 0;
+      do {
+        generateMessage();
+        attempts++;
+      } while (result.value === current && attempts < 8);
+    });
+
+    // Print the preview card (prints just the card area)
+    printBtn.addEventListener('click', function () {
+      const cardHTML = document.querySelector('.card-outer').outerHTML;
+      const style = `
+        <style>
+          @page { size: A5; margin: 12mm; }
+          body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+          .card-outer { width: 100%; max-width: 480px; margin: 0 auto; }
+        </style>
+      `;
+      const printWindow = window.open('', '_blank', 'noopener');
+      if (!printWindow) { alert('Unable to open print window. Your browser might be blocking popups.'); return; }
+      printWindow.document.write('<!doctype html><html><head><title>Print card</title>' + style + '</head><body>');
+      printWindow.document.write(cardHTML);
+      printWindow.document.write('</body></html>');
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+      }, 350);
+    });
+
+    // Allow Enter to generate
+    [nameInput, ageInput, hobbyInput].forEach(el => {
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          generateMessage();
+        }
+      });
+    });
+
+    // Initialize placeholder
+    cardContent.innerHTML = '<div class="placeholder">Your card preview will appear here after you generate a message.</div>';
+  </script>
+</body>
+</html>

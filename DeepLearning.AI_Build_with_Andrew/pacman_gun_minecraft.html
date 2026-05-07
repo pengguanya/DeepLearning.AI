@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<!-- saved from url=(0103)file:///home/pengg3/Documents/03_Education/AI_ML_Learning/DeepLearning.AI_Build_with_Andrew/pacman.html -->
+<html lang="de"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man: Block 3D</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #222; /* Dunkelgrauer Hintergrund */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Verdana', sans-serif;
+            overflow: hidden;
+        }
+
+        h1 {
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffcc00; /* Goldgelb */
+            text-shadow: 4px 4px 0 #000;
+        }
+
+        #game-container {
+            position: relative;
+            border: 8px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+            background-color: #000;
+        }
+
+        canvas {
+            display: block;
+            background-color: #111; /* Bodenfarbe */
+        }
+
+        #score-board {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border: 4px solid #ffcc00;
+            text-align: center;
+            z-index: 10;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        button {
+            background: #ffcc00;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 4px 0 #b38f00;
+        }
+        button:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>PAC-MAN 3D BLOCKS</h1>
+
+    <div id="game-container">
+        <div id="score-board">
+            <span>SCORE: <span id="scoreEl">920</span></span>
+            <span>LIVES: <span id="livesEl">0</span></span>
+        </div>
+        <canvas id="gameCanvas" width="480" height="360"></canvas>
+        
+        <div id="game-over" style="display: block;">
+            <h2 id="status-text">GAME OVER</h2>
+            <h3 id="final-score">Score: 0</h3>
+            <button onclick="initGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreEl');
+        const livesEl = document.getElementById('livesEl');
+        const gameOverEl = document.getElementById('game-over');
+        const statusText = document.getElementById('status-text');
+        const finalScoreEl = document.getElementById('final-score');
+
+        // Konstanten
+        const TILE_SIZE = 30; 
+        
+        // Spielvariablen
+        let animationId;
+        let score = 0;
+        let lives = 3;
+        let pellets = [];
+        let powerUps = [];
+        let boundaries = [];
+        let ghosts = [];
+        let bullets = [];
+        let player;
+        
+        // Karte (Etwas kompakter, damit sie sicher auf den Bildschirm passt)
+        const mapLayout = [
+            ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+            ['-', '.', '.', '.', '.', '-', '.', '.', '.', '.', '.', '-', '.', '.', '.', '-'],
+            ['-', '.', '-', '-', '.', '-', '.', '-', '-', '-', '.', '-', '.', '-', '.', '-'],
+            ['-', '.', '-', '.', '.', '.', '.', '.', '.', '.', '.', '.', '.', '-', '.', '-'],
+            ['-', '.', '-', '.', '-', '-', '-', ' ', '-', '-', '-', '.', '-', '-', '.', '-'],
+            ['-', '.', '.', '.', '-', ' ', ' ', ' ', ' ', ' ', '-', '.', '.', '.', '.', '-'],
+            ['-', '.', '-', '.', '-', ' ', '-', '-', '-', ' ', '-', '.', '-', '.', '.', '-'],
+            ['-', '.', '-', '.', '-', ' ', '-', ' ', '-', ' ', '-', '.', '-', '.', '.', '-'],
+            ['-', '.', '.', '.', '.', '.', '-', '-', '-', '.', '.', '.', '.', '.', '.', '-'],
+            ['-', '.', '-', '-', '-', '.', '.', '.', '.', '.', '-', '-', '-', '.', '.', '-'],
+            ['-', 'p', '.', '.', '-', '.', '-', '-', '-', '.', '-', '.', '.', 'p', '.', '-'],
+            ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
+        ];
+
+        canvas.width = mapLayout[0].length * TILE_SIZE;
+        canvas.height = mapLayout.length * TILE_SIZE;
+
+        // --- 3D BLOCK LOGIK (Minecraft Style) ---
+
+        class Boundary {
+            constructor({ position }) {
+                this.position = position;
+                this.width = TILE_SIZE;
+                this.height = TILE_SIZE;
+            }
+            draw() {
+                // 1. Die Seite (Dunkler) - Das erzeugt die Höhe
+                ctx.fillStyle = '#114'; // Dunkelblau
+                ctx.fillRect(this.position.x, this.position.y + 10, this.width, this.height - 10);
+                
+                // 2. Das Dach (Heller)
+                ctx.fillStyle = '#44f'; // Hellblau
+                ctx.fillRect(this.position.x, this.position.y, this.width, this.height - 10);
+                
+                // 3. Highlight-Kante
+                ctx.fillStyle = '#88f';
+                ctx.fillRect(this.position.x, this.position.y, this.width, 2);
+            }
+        }
+
+        class Pellet {
+            constructor({ position }) {
+                this.position = position;
+                this.radius = 4;
+            }
+            draw() {
+                // Schatten
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.beginPath();
+                ctx.arc(this.position.x + 2, this.position.y + 2, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Kugel
+                ctx.fillStyle = '#ffcccc'; // Rosa-Weiß
+                ctx.beginPath();
+                ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class PowerUp {
+            constructor({ position }) {
+                this.position = position;
+                this.radius = 8;
+            }
+            draw() {
+                // 3D Würfel statt Kreis (passt besser zum Block-Look)
+                ctx.fillStyle = '#c00'; // Dunkelrot Seite
+                ctx.fillRect(this.position.x - 6, this.position.y - 2, 12, 10);
+
+                ctx.fillStyle = '#f55'; // Hellrot Oben
+                ctx.fillRect(this.position.x - 6, this.position.y - 8, 12, 10);
+            }
+        }
+
+        class Bullet {
+            constructor({ position, velocity }) {
+                this.position = position;
+                this.velocity = velocity;
+                this.radius = 5;
+            }
+            draw() {
+                ctx.fillStyle = '#fa0'; // Orange
+                ctx.beginPath();
+                ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            update() {
+                this.draw();
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+            }
+        }
+
+        class Player {
+            constructor({ position, velocity }) {
+                this.position = position;
+                this.velocity = velocity;
+                this.radius = 12; // Sichtbare Größe
+                this.hitbox = 4;  // Winzige Hitbox für flüssiges Bewegen
+                this.radians = 0.75;
+                this.openRate = 0.12;
+                this.rotation = 0;
+                this.speed = 3; 
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.position.x, this.position.y);
+                ctx.rotate(this.rotation);
+                ctx.translate(-this.position.x, -this.position.y);
+                
+                // Pacman 3D Körper
+                ctx.beginPath();
+                ctx.arc(this.position.x, this.position.y, this.radius, this.radians, Math.PI * 2 - this.radians);
+                ctx.lineTo(this.position.x, this.position.y);
+                ctx.fillStyle = '#ffd700'; // Gold
+                ctx.fill();
+                
+                // Kleines Auge
+                ctx.beginPath();
+                ctx.arc(this.position.x + 2, this.position.y - 6, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            update() {
+                this.draw();
+                // Animation
+                if (this.velocity.x !== 0 || this.velocity.y !== 0) {
+                    if (this.radians < 0 || this.radians > 0.75) {
+                        this.openRate = -this.openRate;
+                    }
+                    this.radians += this.openRate;
+                }
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+            }
+        }
+
+        class Ghost {
+            constructor({ position, velocity, color = 'red' }) {
+                this.position = position;
+                this.velocity = velocity;
+                this.radius = 12;
+                this.color = color;
+                this.speed = 1; 
+                this.scared = false;
+                this.hp = 10; 
+                this.flashTime = 0; 
+            }
+
+            draw() {
+                // Farbe wählen
+                let c = this.scared ? '#aaf' : this.color;
+                if (this.flashTime > 0) c = '#fff';
+
+                // Schatten
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(this.position.x, this.position.y + 10, 8, 4, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Geist Körper (Kuppel)
+                ctx.fillStyle = c;
+                ctx.beginPath();
+                ctx.arc(this.position.x, this.position.y, this.radius, Math.PI, 0);
+                ctx.lineTo(this.position.x + this.radius, this.position.y + this.radius);
+                ctx.lineTo(this.position.x - this.radius, this.position.y + this.radius);
+                ctx.fill();
+                
+                // Augen
+                if (!this.scared) {
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(this.position.x - 4, this.position.y - 2, 4, 0, Math.PI * 2);
+                    ctx.arc(this.position.x + 4, this.position.y - 2, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'black'; // Pupillen
+                    ctx.beginPath();
+                    ctx.arc(this.position.x - 4, this.position.y - 2, 2, 0, Math.PI * 2);
+                    ctx.arc(this.position.x + 4, this.position.y - 2, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            update() {
+                this.draw();
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+                this.checkCollisions();
+            }
+
+            checkCollisions() {
+                const collisions = [];
+                const directions = [
+                    { x: this.speed, y: 0 }, 
+                    { x: -this.speed, y: 0 },
+                    { x: 0, y: this.speed }, 
+                    { x: 0, y: -this.speed } 
+                ];
+
+                directions.forEach(dir => {
+                    let isColliding = false;
+                    boundaries.forEach(boundary => {
+                        if (checkGhostCollision({
+                            circle: { ...this, velocity: dir },
+                            rectangle: boundary
+                        })) {
+                            isColliding = true;
+                        }
+                    });
+                    if (!isColliding) collisions.push(dir);
+                });
+
+                // KI Logik
+                if (collisions.length > 1) {
+                    const prevX = this.velocity.x;
+                    const prevY = this.velocity.y;
+                    const filtered = collisions.filter(c => {
+                         // Nicht sofort umdrehen
+                         return !(c.x === -prevX && c.y === -prevY && prevX !== 0) &&
+                                !(c.x === 0 && c.y === -prevY && prevY !== 0);
+                    });
+                    
+                    if (filtered.length > 0) {
+                        this.velocity = filtered[Math.floor(Math.random() * filtered.length)];
+                    } else {
+                        this.velocity = collisions[Math.floor(Math.random() * collisions.length)];
+                    }
+                } else if (collisions.length === 1) {
+                    this.velocity = collisions[0];
+                } else {
+                    // Sackgasse oder Fehler: Umdrehen
+                    this.velocity.x = -this.velocity.x;
+                    this.velocity.y = -this.velocity.y;
+                }
+            }
+        }
+
+        // --- KOLLISION (Der wichtigste Teil) ---
+        
+        function checkPlayerCollision({ player, rect }) {
+            // Anti-Pingelig: Wir prüfen nur die kleine Hitbox im Inneren
+            const nextX = player.position.x + player.velocity.x;
+            const nextY = player.position.y + player.velocity.y;
+            const size = player.hitbox; 
+
+            return (
+                nextX + size > rect.position.x &&
+                nextX - size < rect.position.x + rect.width &&
+                nextY + size > rect.position.y &&
+                nextY - size < rect.position.y + rect.height
+            );
+        }
+
+        function checkGhostCollision({ circle, rectangle }) {
+            // Normale Kollision für Geister
+            const padding = TILE_SIZE / 2 - circle.radius - 1; 
+            return (
+                circle.position.y - circle.radius + circle.velocity.y <= rectangle.position.y + rectangle.height + padding &&
+                circle.position.x + circle.radius + circle.velocity.x >= rectangle.position.x - padding &&
+                circle.position.y + circle.radius + circle.velocity.y >= rectangle.position.y - padding &&
+                circle.position.x - circle.radius + circle.velocity.x <= rectangle.position.x + rectangle.width + padding
+            );
+        }
+
+        // --- INPUT ---
+        let lastKey = '';
+        const keyState = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+
+        window.addEventListener('keydown', ({ key }) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+                keyState[key] = true;
+                lastKey = key;
+            }
+            if (key === ' ') shootBullet();
+        });
+
+        window.addEventListener('keyup', ({ key }) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+                keyState[key] = false;
+            }
+        });
+
+        function shootBullet() {
+            const speed = 7;
+            const vx = Math.cos(player.rotation) * speed;
+            const vy = Math.sin(player.rotation) * speed;
+            bullets.push(new Bullet({
+                position: { x: player.position.x, y: player.position.y },
+                velocity: { x: vx, y: vy }
+            }));
+        }
+
+        // --- SPIEL LOOP ---
+
+        function createMap() {
+            boundaries = [];
+            pellets = [];
+            powerUps = [];
+            mapLayout.forEach((row, i) => {
+                row.forEach((symbol, j) => {
+                    const position = { x: TILE_SIZE * j, y: TILE_SIZE * i };
+                    if (symbol === '-') boundaries.push(new Boundary({ position }));
+                    else if (symbol === '.') pellets.push(new Pellet({ position: { x: position.x + TILE_SIZE/2, y: position.y + TILE_SIZE/2 } }));
+                    else if (symbol === 'p') powerUps.push(new PowerUp({ position: { x: position.x + TILE_SIZE/2, y: position.y + TILE_SIZE/2 } }));
+                });
+            });
+        }
+
+        function spawnGhost(color) {
+            // Startposition sicher auf einem leeren Feld (Reihe 5, Spalte 7 ist leer in dieser Karte)
+            return new Ghost({ 
+                position: { x: TILE_SIZE * 7.5, y: TILE_SIZE * 5.5 }, 
+                velocity: { x: (Math.random() < 0.5 ? 1 : -1), y: 0 }, 
+                color: color 
+            });
+        }
+
+        function resetRound() {
+            player.position = { x: TILE_SIZE * 1.5, y: TILE_SIZE * 1.5 };
+            player.velocity = { x: 0, y: 0 };
+            player.rotation = 0;
+            lastKey = '';
+            Object.keys(keyState).forEach(k => keyState[k] = false);
+
+            bullets = [];
+            ghosts = [
+                spawnGhost('red'),
+                spawnGhost('pink'),
+                spawnGhost('cyan')
+            ];
+            
+            // Neuer Straf-Geist
+            ghosts.push(spawnGhost('orange'));
+        }
+
+        function initGame() {
+            createMap();
+            score = 0;
+            lives = 3;
+            bullets = [];
+            scoreEl.innerHTML = score;
+            livesEl.innerHTML = lives;
+            gameOverEl.style.display = 'none';
+            lastKey = '';
+            Object.keys(keyState).forEach(k => keyState[k] = false);
+
+            player = new Player({
+                position: { x: TILE_SIZE * 1.5, y: TILE_SIZE * 1.5 },
+                velocity: { x: 0, y: 0 }
+            });
+
+            ghosts = [
+                spawnGhost('red'),
+                spawnGhost('pink'),
+                spawnGhost('cyan')
+            ];
+
+            if (animationId) cancelAnimationFrame(animationId);
+            animate();
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Pac-Man Move (mit Toleranz)
+            player.velocity.x = 0;
+            player.velocity.y = 0;
+
+            const moves = {
+                ArrowUp: { x: 0, y: -player.speed, rot: -Math.PI / 2 },
+                ArrowDown: { x: 0, y: player.speed, rot: Math.PI / 2 },
+                ArrowLeft: { x: -player.speed, y: 0, rot: Math.PI },
+                ArrowRight: { x: player.speed, y: 0, rot: 0 }
+            };
+
+            if (keyState[lastKey] && moves[lastKey]) {
+                const intent = moves[lastKey];
+                let collides = false;
+                for (let i = 0; i < boundaries.length; i++) {
+                    if (checkPlayerCollision({ player: { ...player, velocity: intent }, rect: boundaries[i] })) {
+                        collides = true;
+                        break;
+                    }
+                }
+                if (!collides) {
+                    player.velocity.x = intent.x;
+                    player.velocity.y = intent.y;
+                    player.rotation = intent.rot;
+                }
+            }
+            
+            // Alles Zeichnen
+            boundaries.forEach(b => b.draw());
+            pellets.forEach(p => p.draw());
+            powerUps.forEach(p => p.draw());
+
+            // 2. Logik: Bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.update();
+                // Wand Check (einfach)
+                if (b.position.x < 0 || b.position.x > canvas.width || b.position.y < 0 || b.position.y > canvas.height) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+                // Geist Check
+                for (let g = ghosts.length - 1; g >= 0; g--) {
+                    if (Math.hypot(b.position.x - ghosts[g].position.x, b.position.y - ghosts[g].position.y) < b.radius + ghosts[g].radius) {
+                        bullets.splice(i, 1);
+                        ghosts[g].hp--;
+                        ghosts[g].flashTime = 5;
+                        if (ghosts[g].hp <= 0) {
+                            ghosts.splice(g, 1);
+                            score += 500;
+                            scoreEl.innerHTML = score;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // 3. Logik: Essen
+            for (let i = pellets.length - 1; i >= 0; i--) {
+                if (Math.hypot(pellets[i].position.x - player.position.x, pellets[i].position.y - player.position.y) < player.radius) {
+                    pellets.splice(i, 1);
+                    score += 10;
+                    scoreEl.innerHTML = score;
+                }
+            }
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                if (Math.hypot(powerUps[i].position.x - player.position.x, powerUps[i].position.y - player.position.y) < player.radius) {
+                    powerUps.splice(i, 1);
+                    score += 50;
+                    ghosts.forEach(g => { g.scared = true; setTimeout(() => g.scared = false, 5000); });
+                }
+            }
+
+            // Sieg?
+            if (pellets.length === 0 && powerUps.length === 0) {
+                cancelAnimationFrame(animationId);
+                statusText.innerHTML = "YOU WIN!";
+                gameOverEl.style.display = 'block';
+            }
+
+            // 4. Logik: Geister
+            for (let i = ghosts.length - 1; i >= 0; i--) {
+                const ghost = ghosts[i];
+                ghost.update();
+                const dist = Math.hypot(ghost.position.x - player.position.x, ghost.position.y - player.position.y);
+                if (dist < ghost.radius + player.radius) {
+                    if (ghost.scared) {
+                        ghosts.splice(i, 1);
+                        score += 200;
+                    } else {
+                        lives--;
+                        livesEl.innerHTML = lives;
+                        if (lives === 0) {
+                            cancelAnimationFrame(animationId);
+                            statusText.innerHTML = "GAME OVER";
+                            gameOverEl.style.display = 'block';
+                        } else {
+                            resetRound();
+                        }
+                    }
+                }
+            }
+
+            player.update();
+        }
+
+        // Starten!
+        initGame();
+
+    </script>
+
+
+</body></html>

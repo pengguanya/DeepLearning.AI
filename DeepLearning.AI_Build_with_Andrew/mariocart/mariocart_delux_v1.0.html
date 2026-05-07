@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mein 2D Rennspiel</title>
+    <style>
+        body { text-align: center; background: #333; color: white; font-family: sans-serif; margin-top: 50px; }
+        /* Das Spielfeld */
+        canvas { background: #555; border: 5px solid #fff; display: block; margin: 20px auto; }
+    </style>
+</head>
+<body>
+    <h1>Mein 2D-Kart 🏎️</h1>
+    <p>Klicke einmal auf das graue Feld und benutze dann die <b>Pfeiltasten</b>!</p>
+    
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Hier war der Fehler: Kommas statt Semikolons benutzen!
+        let car = { 
+            x: 180, 
+            y: 500, 
+            width: 40, 
+            height: 60, 
+            speed: 0 
+        };
+
+        function draw() {
+            // 1. Bildschirm leeren
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Straße (Seitenlinien) zeichnen
+            ctx.fillStyle = "white";
+            ctx.fillRect(50, 0, 10, 600);
+            ctx.fillRect(340, 0, 10, 600);
+
+            // 3. Dein Auto zeichnen (rot)
+            ctx.fillStyle = "red";
+            ctx.fillRect(car.x, car.y, car.width, car.height);
+
+            // 4. Das Auto bewegen
+            car.y -= car.speed; 
+            
+            // Wenn das Auto oben rausfährt, kommt es unten wieder rein (Endlos-Schleife)
+            if(car.y < -60) {
+                car.y = 600;
+            }
+
+            // Das Bild immer wieder neu zeichnen (wie ein Film)
+            requestAnimationFrame(draw);
+        }
+
+        // Steuerung
+        window.addEventListener("keydown", function(e) {
+            if(e.key === "ArrowLeft") car.x -= 15;
+            if(e.key === "ArrowRight") car.x += 15;
+            if(e.key === "ArrowUp") car.speed = 5;
+            if(e.key === "ArrowDown") car.speed = 0;
+        });
+
+        // Das Spiel starten
+        draw();
+    </script>
+</body>
+</html>

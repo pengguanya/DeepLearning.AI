@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mein Kurviges Rennspiel</title>
+    <style>
+        body { text-align: center; background: #222; color: white; font-family: sans-serif; overflow: hidden; }
+        canvas { background: #2ecc71; border: 10px solid #27ae60; display: block; margin: 10px auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+    <h1>🏎️ Kurviges 2D-Kart 🏎️</h1>
+    <p>Steuere mit <b>Links</b> und <b>Rechts</b>. Bleib auf dem grauen Asphalt!</p>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Spiel-Variablen
+        let carX = 300;
+        const carY = 500;
+        let trackPoints = []; // Hier speichern wir die Kurven
+        let offset = 0;
+        let speed = 5;
+        let curveAmount = 300; // Wo die Mitte der Straße ist
+
+        // Erstelle am Anfang eine lange Straße
+        for (let i = 0; i < 100; i++) {
+            trackPoints.push(300);
+        }
+
+        function update() {
+            // Neue Kurve berechnen (Zufall)
+            curveAmount += (Math.random() - 0.5) * 15;
+            
+            // Die Straße darf nicht aus dem Bild verschwinden
+            if (curveAmount < 150) curveAmount = 150;
+            if (curveAmount > 450) curveAmount = 450;
+
+            // Die Straße "rollt" nach unten
+            trackPoints.unshift(curveAmount);
+            if (trackPoints.length > 100) trackPoints.pop();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Gras zeichnen (Hintergrund ist schon grün, aber wir können Details zufügen)
+            
+            // Die Straße zeichnen
+            ctx.beginPath();
+            ctx.strokeStyle = "#555"; // Dunkles Grau für Asphalt
+            ctx.lineWidth = 150; // Breite der Straße
+            ctx.lineJoin = "round";
+
+            ctx.moveTo(trackPoints[0], 0);
+            for (let i = 1; i < trackPoints.length; i++) {
+                ctx.lineTo(trackPoints[i], i * 6);
+            }
+            ctx.stroke();
+
+            // Weiße Mittellinie
+            ctx.setLineDash([20, 20]);
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            ctx.setLineDash([]); // Dash wieder ausmachen
+
+            // Das Kart zeichnen (ein schickes blaues Rechteck mit Rädern)
+            ctx.fillStyle = "blue";
+            ctx.fillRect(carX - 15, carY, 30, 50); // Körper
+            ctx.fillStyle = "black";
+            ctx.fillRect(carX - 20, carY + 5, 5, 10); // Rad links oben
+            ctx.fillRect(carX + 15, carY + 5, 5, 10); // Rad rechts oben
+            ctx.fillRect(carX - 20, carY + 35, 5, 10); // Rad links unten
+            ctx.fillRect(carX + 15, carY + 35, 5, 10); // Rad rechts unten
+
+            update();
+            requestAnimationFrame(draw);
+        }
+
+        // Steuerung
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") carX -= 20;
+            if (e.key === "ArrowRight") carX += 20;
+        });
+
+        draw();
+    </script>
+</body>
+</ht

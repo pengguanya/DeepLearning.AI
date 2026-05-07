@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mein fester Renn-Plan</title>
+    <style>
+        body { text-align: center; background: #222; color: white; font-family: sans-serif; }
+        canvas { background: #2ecc71; border: 10px solid #27ae60; display: block; margin: 10px auto; }
+        .info { font-size: 20px; font-weight: bold; color: yellow; }
+    </style>
+</head>
+<body>
+    <h1>🏁 Das geplante Rennen 🏁</h1>
+    <div class="info" id="status">Fahr los!</div>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let carX = 300;
+        let distance = 0; // Wie weit wir schon gefahren sind
+        let speed = 0;
+        let finishLine = 2000; // Nach 2000 "Metern" ist das Ziel
+
+        // DER PLAN: Hier legen wir die Kurven fest
+        function getTrackCurve(z) {
+            // Das ist Mathe, die die Straße biegt:
+            if (z > 200 && z < 600) return 150; // Kurve links
+            if (z > 800 && z < 1400) return 450; // Kurve rechts
+            return 300; // Geradeaus (Mitte)
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Die Strecke zeichnen (wir schauen 100 Schritte voraus)
+            ctx.beginPath();
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 140;
+            
+            for (let i = 0; i < 100; i++) {
+                let trackZ = distance + (100 - i) * 6;
+                let x = getTrackCurve(trackZ);
+                if (i === 0) ctx.moveTo(x, i * 6);
+                else ctx.lineTo(x, i * 6);
+            }
+            ctx.stroke();
+
+            // 2. Das Ziel (Schwarz-Weißes Muster)
+            if (distance > finishLine - 600) {
+                ctx.fillStyle = "white";
+                ctx.fillRect(getTrackCurve(finishLine) - 70, 600 - (finishLine - distance), 140, 20);
+                document.getElementById("status").innerText = "Gleich da!";
+            }
+
+            // 3. Das Auto zeichnen
+            ctx.fillStyle = "blue";
+            ctx.fillRect(carX - 15, 500, 30, 50);
+
+            // 4. Logik: Fahren wir auf dem Asphalt?
+            let currentTrackX = getTrackCurve(distance + 100);
+            let diff = Math.abs(carX - currentTrackX);
+            
+            if (diff > 70) {
+                speed = 2; // Langsam im Gras
+                document.getElementById("status").innerText = "Achtung: GRAS!";
+            } else {
+                speed = 6; // Schnell auf der Straße
+                if (distance < finishLine - 600) document.getElementById("status").innerText = "Vollgas!";
+            }
+
+            // Ziel erreicht?
+            if (distance >= finishLine) {
+                speed = 0;
+                document.getElementById("status").innerText = "🏆 ZIEL ERREICHT! 🏆";
+            } else {
+                distance += speed;
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") carX -= 15;
+            if (e.key === "ArrowRight") carX += 15;
+        });
+
+        draw();
+    </script>
+</body>
+</html>

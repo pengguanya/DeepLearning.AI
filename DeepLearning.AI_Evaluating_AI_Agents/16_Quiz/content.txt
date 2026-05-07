@@ -1,0 +1,92 @@
+Quiz
+0/70 points earned
+
+You must earn 50/70 points to pass.
+
+Question 1:
+
+0/10 points
+Which statement best describes evaluation-driven development in the context of AI agents?
+
+
+Evaluation-driven development is a systematic process of designing AI agents to be self-evaluating and self-improving.
+
+Evaluation-driven development is a systematic process of iteratively assessing and improving AI agents using structured evaluations and experiments.
+
+Evaluation-driven development is about prioritizing speed of development over rigorous testing by using lightweight evaluation heuristics to quickly validate agent performance.
+Question 2:
+
+0/10 points
+Which statement best defines the difference between code-based evaluations, LLM-as-a-Judge evaluations, and human annotation in agent assessment?
+
+
+Code-based evaluations involve models generating responses, LLM-as-a-Judge uses programmed checks for correctness, and human annotation relies on automated scripts for labeling outputs.
+
+Code-based evaluations use people to review outputs, LLM-as-a-Judge depends on user feedback for labels, and human annotation applies algorithms to determine output quality.
+
+Code-based evaluations rely on human feedback, LLM-as-a-Judge applies fixed rules to outputs, and human annotation uses models to generate evaluation scores.
+
+Code-based evaluations use programmed checks, LLM-as-a-Judge uses a separate language model to assess outputs, and human annotation involves people labeling outputs or providing feedback.
+Question 3:
+
+0/10 points
+When deciding between code-based evaluations and LLM as-a-Judge evaluations for LLM applications, which statement accurately captures when each is most appropriate?
+
+
+Code-based evaluations are best for evaluating prompt clarity, while LLM as-a-Judge evaluations are better for deterministic, code-based comparisons.
+
+Code-based evaluations are best for measuring subjective analysis, while LLM as-a-Judge evaluations are better for verifying strict numeric outputs.
+
+Code-based evaluations are best for quantitative, deterministic checks, while LLM as-a-Judge evaluations are better for qualitative assessments.
+
+Code-based evaluations are best for open-ended, qualitative tasks, while LLM as-a-Judge evaluations are better for exact, reproducible results.
+Question 4:
+
+0/10 points
+In the context of agent evaluation, what does convergence refer to?
+
+
+Convergence measures whether the agent produces the correct output across all possible paths of the steps taken to complete a task.
+
+Convergence measures how many different paths the agent tries before completing a particular task.
+
+Convergence is a measure of how consistently the agent chooses a path corresponding to the minimum number of steps observed to execute a particular task .
+Question 5:
+
+0/10 points
+Which of the following best describes the types of evaluations typically applied to the router, skills, and path components of an agent?
+
+
+Evaluations include parameter extraction accuracy for routers, latency measurement for skills, and error rate tracking for the agent's trajectory.
+
+Evaluations include prompt relevance for routers, entity recognition for skills, and user feedback collection for the agent's trajectory.
+
+Evaluations include tool description completeness for routers, data formatting consistency for skills, and total token usage for the agent's trajectory.
+
+Evaluations include function/tool choice correctness for routers, output correctness or clarity for skills, and path efficiency or convergence for the agent's trajectory.
+Question 6:
+
+0/10 points
+Which of the following best describes the main components of an AI agent as outlined in the course?
+
+
+The main components of an AI agent are the router, skills, and memory/state.
+
+The main components of an AI agent are the router, tools, and output modules.
+
+The main components of an AI agent are the planner, actions, and context history.
+
+The main components of an AI agent are skills, evaluators, and state management.
+Question 7:
+
+0/10 points
+In the context of AI agent observability, what is the relationship between tracing and spans?
+
+
+Tracing records the input and output data for each tool used by the agent, with spans representing the different agents involved in the workflow.
+
+Tracing captures only error events during execution as traces, with spans representing separate user queries processed by the agent.
+
+Tracing captures each individual agent action as a trace, with spans representing the overall outcome of the entire run.
+
+Tracing captures a full run of the agent to fulfill a request, with spans representing individual steps or units of work within that run.
